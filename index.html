@@ -4,11 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jewish APIs Demo</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .api-section {
+            background-color: white;
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .api-section h2 {
+            color: #2a2a2a;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        p {
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sizzle/2.3.6/sizzle.min.js"></script>
 </head>
 <body>
-    <h1>Jewish API Demonstrations Using jQuery</h1>
+    <h1>Jewish API Demonstrations Using jQuery and Sizzle</h1>
 
     <div class="api-section">
         <h2>Sefaria Texts</h2>
@@ -24,6 +72,59 @@
         <div id="shabbatTimes"></div>
     </div>
 
-    <script src="script.js"></script>
+    <div class="api-section">
+        <h2>Highlight Jewish Holidays with Sizzle</h2>
+        <p>This section demonstrates using Sizzle to dynamically highlight important Jewish holidays in a list.</p>
+        <button id="highlightHolidays">Highlight Holidays</button>
+        <ul id="holidayList">
+            <li>Pesach</li>
+            <li>Shabbat</li>
+            <li>Rosh Hashanah</li>
+            <li>Yom Kippur</li>
+            <li>Sukkot</li>
+            <li>Chanukah</li>
+            <li>Purim</li>
+        </ul>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#fetchSefaria').click(function() {
+                $.ajax({
+                    url: 'https://www.sefaria.org/api/texts/Genesis.1?commentary=0&context=0&pad=0&wrapLinks=0',
+                    type: 'GET',
+                    success: function(data) {
+                        $('#sefariaText').html(`<p><strong>${data.he}</strong></p><p>${data.text}</p>`);
+                    },
+                    error: function(error) {
+                        console.error('Error fetching Sefaria data:', error);
+                    }
+                });
+            });
+
+            $('#fetchShabbat').click(function() {
+                $.ajax({
+                    url: 'https://www.hebcal.com/shabbat?cfg=json&m=50&a=on&geo=pos&latitude=31.7683&longitude=35.2137&tzid=Asia/Jerusalem',
+                    type: 'GET',
+                    success: function(data) {
+                        var items = data.items.filter(item => item.category === 'candles');
+                        var listItems = items.map(item => `<li>${item.title}: ${item.date}</li>`).join('');
+                        $('#shabbatTimes').html(`<ul>${listItems}</ul>`);
+                    },
+                    error: function(error) {
+                        console.error('Error fetching Hebcal data:', error);
+                    }
+                });
+            });
+
+            $('#highlightHolidays').click(function() {
+                var majorHolidays = Sizzle('#holidayList li:contains("Pesach"), #holidayList li:contains("Rosh Hashanah"), #holidayList li:contains("Yom Kippur"), #holidayList li:contains("Sukkot")');
+                majorHolidays.forEach(function(holiday) {
+                    holiday.style.backgroundColor = '#ffdd99'; // light orange background
+                    holiday.style.fontWeight = 'bold';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
