@@ -8,19 +8,21 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 </head>
 <body>
-    <h1>Jewish API Demonstrations</h1>
+    <h1>Jewish API Demonstrations Using jQuery</h1>
 
-    <section>
+    <div class="api-section">
         <h2>Sefaria Texts</h2>
+        <p>This section uses jQuery to fetch Jewish texts from the Sefaria API.</p>
         <button id="fetchSefaria">Fetch Text</button>
         <div id="sefariaText"></div>
-    </section>
+    </div>
 
-    <section>
+    <div class="api-section">
         <h2>Hebcal Shabbat Times</h2>
+        <p>This section uses jQuery to fetch Shabbat times from the Hebcal API for Jerusalem.</p>
         <button id="fetchShabbat">Fetch Shabbat Times</button>
         <div id="shabbatTimes"></div>
-    </section>
+    </div>
 
     <script src="script.js"></script>
 </body>
