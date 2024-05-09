@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Assistant, sans-serif;
+            font-family: 'Assistant', sans-serif;
             margin: 20px;
             background-color: #f4f4f4;
         }
@@ -85,18 +85,10 @@
     </div>
 
     <div class="api-section">
-        <h2>Highlight Jewish Holidays with Sizzle</h2>
-        <p>This section demonstrates using Sizzle to dynamically highlight important Jewish holidays in a list.</p>
-        <button id="highlightHolidays">Highlight Holidays</button>
-        <ul id="holidayList">
-            <li>Pesach</li>
-            <li>Shabbat</li>
-            <li>Rosh Hashanah</li>
-            <li>Yom Kippur</li>
-            <li>Sukkot</li>
-            <li>Chanukah</li>
-            <li>Purim</li>
-        </ul>
+        <h2>Upcoming Jewish Holidays</h2>
+        <p>This section dynamically fetches and displays upcoming Jewish holidays, ordered by nearest date with a countdown in days.</p>
+        <button id="fetchHolidays">Fetch Holidays</button>
+        <div id="holidayList"></div>
     </div>
 
     <!-- React Component for Additional Jewish Themed Content -->
@@ -177,11 +169,25 @@
                 });
             });
 
-            $('#highlightHolidays').click(function() {
-                var majorHolidays = Sizzle('#holidayList li:contains("Pesach"), #holidayList li:contains("Rosh Hashanah"), #holidayList li:contains("Yom Kippur"), #holidayList li:contains("Sukkot")');
-                majorHolidays.forEach(function(holiday) {
-                    holiday.style.backgroundColor = '#ffdd99';
-                    holiday.style.fontWeight = 'bold';
+            $('#fetchHolidays').click(function() {
+                $.ajax({
+                    url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+                    type: 'GET',
+                    success: function(data) {
+                        const today = new Date();
+                        const holidays = data.items.filter(item => new Date(item.date) >= today);
+                        holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+                        let listHtml = '<ul>';
+                        holidays.forEach(holiday => {
+                            const daysUntil = Math.ceil((new Date(holiday.date) - today) / (1000 * 60 * 60 * 24));
+                            listHtml += `<li>${holiday.title} - in ${daysUntil} days</li>`;
+                        });
+                        listHtml += '</ul>';
+                        $('#holidayList').html(listHtml);
+                    },
+                    error: function() {
+                        $('#holidayList').text('Failed to fetch holiday data.');
+                    }
                 });
             });
         });
