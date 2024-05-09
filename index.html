@@ -59,14 +59,14 @@
 
     <div class="api-section">
         <h2>Sefaria Texts</h2>
-        <p>This section uses jQuery to fetch Jewish texts from the Sefaria API.</p>
-        <button id="fetchSefaria">Fetch Text</button>
+        <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule.</p>
+        <button id="fetch929">Fetch 929 Text</button>
         <div id="sefariaText"></div>
     </div>
 
     <div class="api-section">
-        <h2>Hebcal Shabbat Times</h2>
-        <p>This section uses jQuery to fetch Shabbat times from the Hebcal API for Jerusalem.</p>
+        <h2>Hebcal Shabbat Times for 60645</h2>
+        <p>This section uses jQuery to fetch Shabbat times for the 60645 area.</p>
         <button id="fetchShabbat">Fetch Shabbat Times</button>
         <div id="shabbatTimes"></div>
     </div>
@@ -107,22 +107,31 @@
 
     <script>
         $(document).ready(function() {
-            $('#fetchSefaria').click(function() {
+            $('#fetch929').click(function() {
+                const today = new Date();
+                const nextThursday = new Date(today);
+                nextThursday.setDate(today.getDate() + ((4 + 7 - today.getDay()) % 7));
+                const year = nextThursday.getFullYear();
+                const month = nextThursday.getMonth() + 1;
+                const day = nextThursday.getDate();
+                const dateFormatted = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
+                const url = `https://www.929.org.il/page/${dateFormatted}`;
+
                 $.ajax({
-                    url: 'https://www.sefaria.org/api/texts/Genesis.1?commentary=0&context=0&pad=0&wrapLinks=0',
+                    url: url,
                     type: 'GET',
                     success: function(data) {
-                        $('#sefariaText').html(`<p><strong>${data.he}</strong></p><p>${data.text}</p>`);
+                        $('#sefariaText').html(`<p>Content for ${dateFormatted} from 929: ${data}</p>`);
                     },
                     error: function(error) {
-                        console.error('Error fetching Sefaria data:', error);
+                        console.error('Error fetching 929 data:', error);
                     }
                 });
             });
 
             $('#fetchShabbat').click(function() {
                 $.ajax({
-                    url: 'https://www.hebcal.com/shabbat?cfg=json&m=50&a=on&geo=pos&latitude=31.7683&longitude=35.2137&tzid=Asia/Jerusalem',
+                    url: 'https://www.hebcal.com/shabbat?cfg=json&m=50&a=on&geo=zip&zip=60645',
                     type: 'GET',
                     success: function(data) {
                         var items = data.items.filter(item => item.category === 'candles');
@@ -130,7 +139,7 @@
                         $('#shabbatTimes').html(`<ul>${listItems}</ul>`);
                     },
                     error: function(error) {
-                        console.error('Error fetching Hebcal data:', error);
+                        console.error('Error fetching Hebcal data for 60645:', error);
                     }
                 });
             });
