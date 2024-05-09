@@ -59,7 +59,7 @@
 
     <div class="api-section">
         <h2>Sefaria Texts</h2>
-        <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule and text.</p>
+        <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule.</p>
         <button id="fetch929">Fetch 929 Text</button>
         <div id="sefariaText"></div>
     </div>
@@ -109,49 +109,39 @@
         $(document).ready(function() {
             $('#fetch929').click(function() {
                 const today = new Date();
-                const nextThursday = new Date(today);
-                nextThursday.setDate(today.getDate() + ((4 + 7 - today.getDay()) % 7));
-                const year = nextThursday.getFullYear();
-                const month = nextThursday.getMonth() + 1;
-                const day = nextThursday.getDate();
-            
+                const dayOfWeek = today.getDay();
+                const thursday = 4;
+                let queryDate = new Date(today);
+                queryDate.setDate(today.getDate() + ((thursday + 7 - dayOfWeek) % 7)); // Calculate next Thursday or today if it is Thursday
+                const year = queryDate.getFullYear();
+                const month = queryDate.getMonth() + 1; // JavaScript months are 0-based.
+                const day = queryDate.getDate();
+
                 $.ajax({
                     url: `https://www.sefaria.org/api/calendars?year=${year}&month=${month}&day=${day}`,
                     type: 'GET',
-                    success: function(data) {
-                        console.log('Calendar data:', data); // Check the entire data structure
-                        const item = data.calendar_items.find(item => item.title.en === '929');
-                        if (!item) {
-                            console.error('No 929 item found in data');
-                            return;
-                        }
-                        const textUrl = `https://www.sefaria.org/${item.url}`;
-                        console.log('Fetching text from:', textUrl); // Verify the URL
-                        $.ajax({
-                            url: textUrl,
-                            type: 'GET',
-                            success: function(textData) {
-                                console.log('Text data:', textData); // Inspect text data
-                                if (textData.text && textData.he) {
-                                    $('#sefariaText').html(`<p>${textData.text.join('<br>')}</p><p>${textData.he.join('<br>')}</p>`);
-                                } else {
-                                    console.error('Text data is missing text or he fields');
-                                    $('#sefariaText').html('<p>Text data is incomplete.</p>');
+                    success: function(calendarData) {
+                        const psalmRef = calendarData.calendar_items.find(item => item.title.en === '929')?.ref;
+                        if (psalmRef) {
+                            $.ajax({
+                                url: `https://www.sefaria.org/api/texts/${psalmRef}`,
+                                type: 'GET',
+                                success: function(textData) {
+                                    $('#sefariaText').html(`<p><strong>English:</strong> ${textData.text}</p><p><strong>Hebrew:</strong> ${textData.he}</p>`);
+                                },
+                                error: function() {
+                                    $('#sefariaText').text('Failed to fetch the text data.');
                                 }
-                            },
-                            error: function(error) {
-                                console.error('Error fetching text:', error);
-                                $('#sefariaText').html('<p>Error fetching text. Please try again later.</p>');
-                            }
-                        });
+                            });
+                        } else {
+                            $('#sefariaText').text('No 929 text found for this date.');
+                        }
                     },
-                    error: function(error) {
-                        console.error('Error fetching schedule:', error);
-                        $('#sefariaText').html('<p>Error fetching schedule. Please try again later.</p>');
+                    error: function() {
+                        $('#sefariaText').text('Failed to fetch calendar data.');
                     }
                 });
             });
-
 
             $('#fetchShabbat').click(function() {
                 $.ajax({
@@ -162,8 +152,8 @@
                         var listItems = items.map(item => `<li>${item.title}: ${item.date}</li>`).join('');
                         $('#shabbatTimes').html(`<ul>${listItems}</ul>`);
                     },
-                    error: function(error) {
-                        console.error('Error fetching Hebcal data for 60645:', error);
+                    error: function() {
+                        $('#shabbatTimes').text('Failed to fetch Shabbat times.');
                     }
                 });
             });
