@@ -54,6 +54,9 @@
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
+        th {
+            background-color: #f8f8f8;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sizzle/2.3.6/sizzle.min.js"></script>
@@ -137,11 +140,10 @@
                                 url: `https://www.sefaria.org/api/texts/${chapterRef}`,
                                 type: 'GET',
                                 success: function(textData) {
-                                    let versesHtml = '<table>';
-                                    versesHtml += `<caption>${chapterTitle}</caption>`;
-                                    for (let i = 0; i < textData.text.length; i++) {
-                                        versesHtml += `<tr><td>${textData.text[i]}</td><td>${textData.he[i]}</td></tr>`;
-                                    }
+                                    let versesHtml = '<table><caption>' + chapterTitle + '</caption>';
+                                    textData.text.forEach((verse, index) => {
+                                        versesHtml += `<tr><th>Verse ${index + 1}</th><td>${verse}</td><td>${textData.he[index]}</td></tr>`;
+                                    });
                                     versesHtml += '</table>';
                                     $('#sefariaText').html(versesHtml);
                                 },
