@@ -59,7 +59,7 @@
 
     <div class="api-section">
         <h2>Sefaria Texts</h2>
-        <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule.</p>
+        <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule and text.</p>
         <button id="fetch929">Fetch 929 Text</button>
         <div id="sefariaText"></div>
     </div>
@@ -113,18 +113,28 @@
                 nextThursday.setDate(today.getDate() + ((4 + 7 - today.getDay()) % 7));
                 const year = nextThursday.getFullYear();
                 const month = nextThursday.getMonth() + 1;
-                const day = nextThursday.getDate();
-                const dateFormatted = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
-                const url = `https://www.929.org.il/page/${dateFormatted}`;
+                const day = next Thursday.getDate();
 
                 $.ajax({
-                    url: url,
+                    url: `https://www.sefaria.org/api/calendars?year=${year}&month=${month}&day=${day}`,
                     type: 'GET',
-                    success: function(data) {
-                        $('#sefariaText').html(`<p>Content for ${dateFormatted} from 929: ${data}</p>`);
+                    success: function(response) {
+                        let textUrl = 'https://www.sefaria.org/' + response.calendar_items.filter(item => item.title.en === '929')[0].url;
+                        $.ajax({
+                            url: textUrl,
+                            type: 'GET',
+                            success: function(textData) {
+                                $('#sefariaText').html(`<p><strong>${textData.text.join('<br>')}</strong></p><p>${textData.he.join('<br>')}</p>`);
+                            },
+                            error: function(error) {
+                                console.error('Error fetching text:', error);
+                                $('#sefariaText').html('<p>Error fetching text. Please try again later.</p>');
+                            }
+                        });
                     },
                     error: function(error) {
-                        console.error('Error fetching 929 data:', error);
+                        console.error('Error fetching schedule:', error);
+                        $('#sefariaText').html('<p>Error fetching schedule. Please try again later.</p>');
                     }
                 });
             });
