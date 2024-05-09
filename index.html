@@ -114,17 +114,30 @@
                 const year = nextThursday.getFullYear();
                 const month = nextThursday.getMonth() + 1;
                 const day = nextThursday.getDate();
-
+            
                 $.ajax({
                     url: `https://www.sefaria.org/api/calendars?year=${year}&month=${month}&day=${day}`,
                     type: 'GET',
-                    success: function(response) {
-                        let textUrl = 'https://www.sefaria.org/' + response.calendar_items.filter(item => item.title.en === '929')[0].url;
+                    success: function(data) {
+                        console.log('Calendar data:', data); // Check the entire data structure
+                        const item = data.calendar_items.find(item => item.title.en === '929');
+                        if (!item) {
+                            console.error('No 929 item found in data');
+                            return;
+                        }
+                        const textUrl = `https://www.sefaria.org/${item.url}`;
+                        console.log('Fetching text from:', textUrl); // Verify the URL
                         $.ajax({
                             url: textUrl,
                             type: 'GET',
                             success: function(textData) {
-                                $('#sefariaText').html(`<p><strong>${textData.text.join('<br>')}</strong></p><p>${textData.he.join('<br>')}</p>`);
+                                console.log('Text data:', textData); // Inspect text data
+                                if (textData.text && textData.he) {
+                                    $('#sefariaText').html(`<p>${textData.text.join('<br>')}</p><p>${textData.he.join('<br>')}</p>`);
+                                } else {
+                                    console.error('Text data is missing text or he fields');
+                                    $('#sefariaText').html('<p>Text data is incomplete.</p>');
+                                }
                             },
                             error: function(error) {
                                 console.error('Error fetching text:', error);
@@ -138,6 +151,7 @@
                     }
                 });
             });
+
 
             $('#fetchShabbat').click(function() {
                 $.ajax({
