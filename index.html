@@ -45,6 +45,15 @@
             font-size: 14px;
             color: #555;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sizzle/2.3.6/sizzle.min.js"></script>
@@ -121,13 +130,20 @@
                     url: `https://www.sefaria.org/api/calendars?year=${year}&month=${month}&day=${day}`,
                     type: 'GET',
                     success: function(calendarData) {
-                        const psalmRef = calendarData.calendar_items.find(item => item.title.en === '929')?.ref;
-                        if (psalmRef) {
+                        const chapterRef = calendarData.calendar_items.find(item => item.title.en === '929')?.ref;
+                        const chapterTitle = calendarData.calendar_items.find(item => item.title.en === '929')?.displayValue.en;
+                        if (chapterRef) {
                             $.ajax({
-                                url: `https://www.sefaria.org/api/texts/${psalmRef}`,
+                                url: `https://www.sefaria.org/api/texts/${chapterRef}`,
                                 type: 'GET',
                                 success: function(textData) {
-                                    $('#sefariaText').html(`<p><strong>English:</strong> ${textData.text}</p><p><strong>Hebrew:</strong> ${textData.he}</p>`);
+                                    let versesHtml = '<table>';
+                                    versesHtml += `<caption>${chapterTitle}</caption>`;
+                                    for (let i = 0; i < textData.text.length; i++) {
+                                        versesHtml += `<tr><td>${textData.text[i]}</td><td>${textData.he[i]}</td></tr>`;
+                                    }
+                                    versesHtml += '</table>';
+                                    $('#sefariaText').html(versesHtml);
                                 },
                                 error: function() {
                                     $('#sefariaText').text('Failed to fetch the text data.');
