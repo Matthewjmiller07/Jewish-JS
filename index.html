@@ -113,7 +113,7 @@
                 nextThursday.setDate(today.getDate() + ((4 + 7 - today.getDay()) % 7));
                 const year = nextThursday.getFullYear();
                 const month = nextThursday.getMonth() + 1;
-                const day = next Thursday.getDate();
+                const day = nextThursday.getDate();
 
                 $.ajax({
                     url: `https://www.sefaria.org/api/calendars?year=${year}&month=${month}&day=${day}`,
