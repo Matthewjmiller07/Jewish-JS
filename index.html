@@ -85,11 +85,18 @@
     </div>
 
     <div class="api-section">
-        <h2>Upcoming Jewish Holidays</h2>
-        <p>This section dynamically fetches and displays upcoming Jewish holidays, ordered by nearest date with a countdown in days.</p>
-        <button id="fetchHolidays">Fetch Holidays</button>
-        <div id="holidayList"></div>
-    </div>
+    <h2>Upcoming Jewish Holidays</h2>
+    <p>This section dynamically fetches and displays upcoming Jewish holidays, ordered by nearest date with a countdown in days.</p>
+    <button id="fetchHolidays">Fetch Holidays</button>
+    <div id="holidayList"></div>
+</div>
+
+<div class="api-section">
+    <h2>Upcoming Parsha Readings</h2>
+    <p>This section dynamically fetches and displays upcoming weekly Torah portions with a countdown in days.</p>
+    <button id="fetchParashat">Fetch Parashat Readings</button>
+    <div id="parashatList"></div>
+</div>
 
     <!-- React Component for Additional Jewish Themed Content -->
     <div id="reactApp"></div>
@@ -170,26 +177,91 @@
             });
 
             $('#fetchHolidays').click(function() {
-                $.ajax({
-                    url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
-                    type: 'GET',
-                    success: function(data) {
-                        const today = new Date();
-                        const holidays = data.items.filter(item => new Date(item.date) >= today);
-                        holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
-                        let listHtml = '<ul>';
-                        holidays.forEach(holiday => {
-                            const daysUntil = Math.ceil((new Date(holiday.date) - today) / (1000 * 60 * 60 * 24));
-                            listHtml += `<li>${holiday.title} - in ${daysUntil} days</li>`;
-                        });
-                        listHtml += '</ul>';
-                        $('#holidayList').html(listHtml);
-                    },
-                    error: function() {
-                        $('#holidayList').text('Failed to fetch holiday data.');
-                    }
-                });
+    $.ajax({
+        url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+        type: 'GET',
+        success: function(data) {
+            const today = new Date();
+            const holidays = data.items.filter(item => new Date(item.date) >= today && !item.title.includes('Parashat'));
+            holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let listHtml = '<ul>';
+            holidays.forEach(holiday => {
+                const daysUntil = Math.ceil((new Date(holiday.date) - today) / (1000 * 60 * 60 * 24));
+                listHtml += `<li>${holiday.title} - in ${daysUntil} days</li>`;
             });
+            listHtml += '</ul>';
+            $('#holidayList').html(listHtml);
+        },
+        error: function() {
+            $('#holidayList').text('Failed to fetch holiday data.');
+        }
+    });
+});
+
+$('#fetchParashat').click(function() {
+    $.ajax({
+        url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+        type: 'GET',
+        success: function(data) {
+            const today = new Date();
+            const parashat = data.items.filter(item => new Date(item.date) >= today && item.title.includes('Parashat'));
+            parashat.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let listHtml = '<ul>';
+            parashat.forEach(reading => {
+                const daysUntil = Math.ceil((new Date(reading.date) - today) / (1000 * 60 * 60 * 24));
+                listHtml += `<li>${reading.title} - in ${daysUntil} days</li>`;
+            });
+            listHtml += '</ul>';
+            $('#parashatList').html(listHtml);
+        },
+        error: function() {
+            $('#parashatList').text('Failed to fetch Parashat data.');
+        }
+    });
+});
+$('#fetchHolidays').click(function() {
+    $.ajax({
+        url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+        type: 'GET',
+        success: function(data) {
+            const today = new Date();
+            const holidays = data.items.filter(item => new Date(item.date) >= today && !item.title.includes('Parashat'));
+            holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let listHtml = '<ul>';
+            holidays.forEach(holiday => {
+                const daysUntil = Math.ceil((new Date(holiday.date) - today) / (1000 * 60 * 60 * 24));
+                listHtml += `<li>${holiday.title} - in ${daysUntil} days</li>`;
+            });
+            listHtml += '</ul>';
+            $('#holidayList').html(listHtml);
+        },
+        error: function() {
+            $('#holidayList').text('Failed to fetch holiday data.');
+        }
+    });
+});
+
+$('#fetchParashat').click(function() {
+    $.ajax({
+        url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+        type: 'GET',
+        success: function(data) {
+            const today = new Date();
+            const parashat = data.items.filter(item => new Date(item.date) >= today && item.title.includes('Parashat'));
+            parashat.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let listHtml = '<ul>';
+            parashat.forEach(reading => {
+                const daysUntil = Math.ceil((new Date(reading.date) - today) / (1000 * 60 * 60 * 24));
+                listHtml += `<li>${reading.title} - in ${daysUntil} days</li>`;
+            });
+            listHtml += '</ul>';
+            $('#parashatList').html(listHtml);
+        },
+        error: function() {
+            $('#parashatList').text('Failed to fetch Parashat data.');
+        }
+    });
+});
         });
     </script>
 </body>
