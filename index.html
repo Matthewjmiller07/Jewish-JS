@@ -218,17 +218,43 @@
                     success: function(data) {
                         console.log("Data fetched", data);
                         const today = new Date();
-                        const holidays = data.items.filter(item => new Date(item.date) >= today && !item.title.includes('Parashat'));
+                        const holidays = data.items.filter(item => item.category === 'holiday');
                         holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
                         let listHtml = '<ul>';
                         let labels = [];
                         let daysUntilData = [];
+                        let backgroundColors = [];
+                        let borderColors = [];
+                        let monthGroups = {};
+
+                        const monthColors = {
+                            'January': { background: 'rgba(255, 99, 132, 0.2)', border: 'rgba(255, 99, 132, 1)' },
+                            'February': { background: 'rgba(54, 162, 235, 0.2)', border: 'rgba(54, 162, 235, 1)' },
+                            'March': { background: 'rgba(255, 206, 86, 0.2)', border: 'rgba(255, 206, 86, 1)' },
+                            'April': { background: 'rgba(75, 192, 192, 0.2)', border: 'rgba(75, 192, 192, 1)' },
+                            'May': { background: 'rgba(153, 102, 255, 0.2)', border: 'rgba(153, 102, 255, 1)' },
+                            'June': { background: 'rgba(255, 159, 64, 0.2)', border: 'rgba(255, 159, 64, 1)' },
+                            'July': { background: 'rgba(199, 199, 199, 0.2)', border: 'rgba(199, 199, 199, 1)' },
+                            'August': { background: 'rgba(83, 102, 255, 0.2)', border: 'rgba(83, 102, 255, 1)' },
+                            'September': { background: 'rgba(255, 128, 64, 0.2)', border: 'rgba(255, 128, 64, 1)' },
+                            'October': { background: 'rgba(192, 75, 192, 0.2)', border: 'rgba(192, 75, 192, 1)' },
+                            'November': { background: 'rgba(102, 153, 255, 0.2)', border: 'rgba(102, 153, 255, 1)' },
+                            'December': { background: 'rgba(128, 255, 128, 0.2)', border: 'rgba(128, 255, 128, 1)' }
+                        };
 
                         holidays.forEach(holiday => {
-                            const daysUntil = Math.ceil((new Date(holiday.date) - today) / (1000 * 60 * 60 * 24));
-                            listHtml += `<li>${holiday.title} - in ${daysUntil} days</li>`;
+                            const holidayDate = new Date(holiday.date);
+                            const monthName = holidayDate.toLocaleString('default', { month: 'long' });
+                            const daysUntil = Math.ceil((holidayDate - today) / (1000 * 60 * 60 * 24));
+                            listHtml += `<li>${holiday.title} - ${daysUntil >= 0 ? 'in ' + daysUntil + ' days' : Math.abs(daysUntil) + ' days ago'}</li>`;
                             labels.push(holiday.title);
                             daysUntilData.push(daysUntil);
+                            backgroundColors.push(monthColors[monthName].background);
+                            borderColors.push(monthColors[monthName].border);
+                            if (!monthGroups[monthName]) {
+                                monthGroups[monthName] = [];
+                            }
+                            monthGroups[monthName].push(labels.length - 1);
                         });
                         listHtml += '</ul>';
                         $('#holidayList').html(listHtml);
@@ -247,8 +273,8 @@
                                 datasets: [{
                                     label: 'Days Until Holiday',
                                     data: daysUntilData,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    backgroundColor: backgroundColors,
+                                    borderColor: borderColors,
                                     borderWidth: 1
                                 }]
                             },
@@ -257,8 +283,50 @@
                                     y: {
                                         beginAtZero: true
                                     }
+                                },
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
                                 }
-                            }
+                            },
+                            plugins: [{
+                                id: 'custom_labels',
+                                afterDatasetsDraw: function(chart, args, options) {
+                                    const ctx = chart.ctx;
+                                    Object.keys(monthGroups).forEach(month => {
+                                        const group = monthGroups[month];
+                                        const start = group[0];
+                                        const end = group[group.length - 1];
+                                        const xStart = chart.getDatasetMeta(0).data[start].x;
+                                        const xEnd = chart.getDatasetMeta(0).data[end].x;
+                                        const xMid = (xStart + xEnd) / 2;
+                                        const yPosition = Math.min(...group.map(index => chart.getDatasetMeta(0).data[index].y)) - 15;
+                                        ctx.save();
+                                        ctx.fillStyle = 'white';
+                                        ctx.fillRect(xMid - 20, yPosition - 12, 40, 16); // Draw white rectangle behind the text
+                                        ctx.fillStyle = monthColors[month].border;
+                                        ctx.font = '12px Arial';
+                                        ctx.textAlign = 'center';
+                                        ctx.fillText(month, xMid, yPosition);
+                                        ctx.restore();
+                                    });
+
+                                    // Mark the current date
+                                    const todayIndex = labels.findIndex(label => new Date(data.items.find(item => item.title === label).date) > today);
+                                    if (todayIndex > 0) {
+                                        const bar = chart.getDatasetMeta(0).data[todayIndex];
+                                        ctx.save();
+                                        ctx.strokeStyle = 'red';
+                                        ctx.lineWidth = 2;
+                                        ctx.beginPath();
+                                        ctx.moveTo(bar.x, chart.scales.y.top);
+                                        ctx.lineTo(bar.x, chart.chartArea.bottom);
+                                        ctx.stroke();
+                                        ctx.restore();
+                                    }
+                                }
+                            }]
                         });
                     },
                     error: function() {
