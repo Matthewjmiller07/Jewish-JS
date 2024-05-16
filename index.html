@@ -11,11 +11,11 @@
             margin: 20px;
             background-color: #f4f4f4;
         }
-        h1 {
+        h1, h2 {
             color: #333;
             text-align: center;
         }
-        .api-section {
+        .api-section, .container {
             background-color: white;
             border: 2px solid #ddd;
             padding: 20px;
@@ -23,10 +23,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .api-section h2 {
-            color: #2a2a2a;
-        }
-        button {
+        button, select, input[type="checkbox"] {
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -58,7 +55,15 @@
         th {
             background-color: #f8f8f8;
         }
+        .past-holiday {
+            color: #888; /* Grey out past holidays */
+        }
+        .upcoming-holiday {
+            color: #4CAF50; /* Highlight upcoming holidays */
+        }
     </style>
+    
+    
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sizzle/2.3.6/sizzle.min.js"></script>
     <!-- React and ReactDOM CDN Links -->
@@ -71,7 +76,20 @@
 </head>
 <body>
     <h1>Jewish API Demonstrations Using jQuery, Sizzle, and React</h1>
-
+    <div class="api-section">
+        <h2>Calculate Work Days Off for Jewish Holidays</h2>
+        <label for="yearSelect">Select Year:</label>
+        <select id="yearSelect"></select>
+        <div>
+            <input type="checkbox" id="includeTishaBav" checked>
+            <label for="includeTishaBav">Include Tish'a B'Av</label>
+        </div>
+        <button onclick="calculateDaysOff()">Calculate Days Off</button>
+        <div id="results"></div>
+        <canvas id="workdaysChart"></canvas>
+    </div>
+    
+    
     <div class="api-section">
         <h2>Sefaria Texts</h2>
         <p>This section dynamically fetches today's or the coming Thursday's 929 chapter schedule.</p>
@@ -87,8 +105,8 @@
     </div>
 
     <div class="api-section">
-        <h2>Upcoming Jewish Holidays</h2>
-        <p>This section dynamically fetches and displays upcoming Jewish holidays, ordered by nearest date with a countdown in days.</p>
+        <h2>Jewish Holiday Timeline</h2>
+        <p>This section dynamically fetches and displays Jewish holidays, highlighting past and upcoming dates.</p>
         <button id="fetchHolidays">Fetch Holidays</button>
         <div id="holidayList"></div>
     </div>
@@ -105,6 +123,7 @@
         <button id="fetchParashat">Fetch Parashat Readings</button>
         <div id="parashatList"></div>
     </div>
+
 
     <!-- React Component for Additional Jewish Themed Content -->
     <div id="reactApp"></div>
@@ -124,7 +143,103 @@
 
         ReactDOM.render(<ReactApp />, document.getElementById('reactApp'));
     </script>
+<script>
+    $(document).ready(function() {
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear - 5; year <= currentYear + 5; year++) {
+            $('#yearSelect').append(new Option(year, year));
+        }
+        $('#yearSelect').val(currentYear);
+        $('#includeTishaBav').change(function() {
+            console.log('Checkbox state changed, recalculating days off.');
+            calculateDaysOff();  // Re-calculate when checkbox changes
+        });
+        calculateDaysOff();  // Perform initial calculation
+    });
 
+    var workdaysChart = null; // Hold the chart instance globally
+
+    function calculateDaysOff() {
+        const year = $('#yearSelect').val();
+        const includeTishaBav = $('#includeTishaBav').is(':checked');
+        console.log(`Calculating days off for year: ${year} with Tish'a B'Av included: ${includeTishaBav}`);
+
+        const apiUrl = `https://www.hebcal.com/hebcal/?v=1&cfg=json&year=${year}&maj=on&min=on&mod=on&nx=on&s=on`;
+
+        $.getJSON(apiUrl, function(data) {
+            const holidays = [
+                'Pesach I', 'Pesach II', 'Pesach VII', 'Pesach VIII',
+                'Shavuot I', 'Shavuot II',
+                'Rosh Hashana', 'Rosh Hashana II',
+                'Yom Kippur', 'Sukkot I', 'Sukkot II',
+                'Shmini Atzeret', 'Simchat Torah'
+            ];
+
+            if (includeTishaBav) {
+                holidays.push("Tish’a B’Av");
+            }
+
+            console.log('Holidays considered:', holidays.join(', '));
+
+            let totalDaysOff = 0;
+            let details = '';
+
+            data.items.forEach(item => {
+                const date = new Date(item.date);
+                const dayOfWeek = date.getDay();
+                const isHoliday = holidays.includes(item.title) && dayOfWeek >= 1 && dayOfWeek <= 5;
+
+                console.log(`Checking holiday: ${item.title}, Date: ${date.toISOString().split('T')[0]}, Day of Week: ${dayOfWeek}, Is Included: ${isHoliday}`);
+
+                if (isHoliday) {
+                    totalDaysOff++;
+                    details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday.</li>`;
+                }
+            });
+
+            console.log(`Total holidays requiring days off: ${totalDaysOff}`);
+
+            $('#results').html(`You need to take <strong>${totalDaysOff}</strong> days off work in ${year}.`);
+            $('#results').append(`<ul>${details}</ul>`);
+
+            if (workdaysChart) workdaysChart.destroy();  // Destroy the existing chart
+            var ctx = document.getElementById('workdaysChart').getContext('2d');
+            workdaysChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Workday Holidays', 'Total Holidays'],
+                    datasets: [{
+                        data: [totalDaysOff, holidays.length - totalDaysOff],
+                        backgroundColor: ['#4CAF50', '#DDDDDD'],
+                        hoverBackgroundColor: ['#45a049', '#CCCCCC']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }).fail(function() {
+            console.error('Failed to fetch holiday data');
+            $('#results').html('Failed to load holiday data.');
+        });
+    }
+</script>
+
+
+
+
+
+
+
+
+
+    
+    
     <script>
         $(document).ready(function() {
             console.log("Document ready");
@@ -211,130 +326,132 @@
             });
 
             $('#fetchHolidays').click(function() {
-                console.log("Fetching holidays");
-                $.ajax({
-                    url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
-                    type: 'GET',
-                    success: function(data) {
-                        console.log("Data fetched", data);
-                        const today = new Date();
-                        const holidays = data.items.filter(item => item.category === 'holiday');
-                        holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
-                        let listHtml = '<ul>';
-                        let labels = [];
-                        let daysUntilData = [];
-                        let backgroundColors = [];
-                        let borderColors = [];
-                        let monthGroups = {};
+    console.log("Fetching holidays");
+    $.ajax({
+        url: 'https://www.hebcal.com/hebcal/?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&s=on',
+        type: 'GET',
+        success: function(data) {
+            console.log("Data fetched", data);
+            const today = new Date();
+            const holidays = data.items.filter(item => item.category === 'holiday');
+            holidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let listHtml = '<ul>';
+            let labels = [];
+            let daysUntilData = [];
+            let backgroundColors = [];
+            let borderColors = [];
+            let monthGroups = {};
 
-                        const monthColors = {
-                            'January': { background: 'rgba(255, 99, 132, 0.2)', border: 'rgba(255, 99, 132, 1)' },
-                            'February': { background: 'rgba(54, 162, 235, 0.2)', border: 'rgba(54, 162, 235, 1)' },
-                            'March': { background: 'rgba(255, 206, 86, 0.2)', border: 'rgba(255, 206, 86, 1)' },
-                            'April': { background: 'rgba(75, 192, 192, 0.2)', border: 'rgba(75, 192, 192, 1)' },
-                            'May': { background: 'rgba(153, 102, 255, 0.2)', border: 'rgba(153, 102, 255, 1)' },
-                            'June': { background: 'rgba(255, 159, 64, 0.2)', border: 'rgba(255, 159, 64, 1)' },
-                            'July': { background: 'rgba(199, 199, 199, 0.2)', border: 'rgba(199, 199, 199, 1)' },
-                            'August': { background: 'rgba(83, 102, 255, 0.2)', border: 'rgba(83, 102, 255, 1)' },
-                            'September': { background: 'rgba(255, 128, 64, 0.2)', border: 'rgba(255, 128, 64, 1)' },
-                            'October': { background: 'rgba(192, 75, 192, 0.2)', border: 'rgba(192, 75, 192, 1)' },
-                            'November': { background: 'rgba(102, 153, 255, 0.2)', border: 'rgba(102, 153, 255, 1)' },
-                            'December': { background: 'rgba(128, 255, 128, 0.2)', border: 'rgba(128, 255, 128, 1)' }
-                        };
+            const monthColors = {
+                'January': { background: 'rgba(255, 99, 132, 0.2)', border: 'rgba(255, 99, 132, 1)' },
+                'February': { background: 'rgba(54, 162, 235, 0.2)', border: 'rgba(54, 162, 235, 1)' },
+                'March': { background: 'rgba(255, 206, 86, 0.2)', border: 'rgba(255, 206, 86, 1)' },
+                'April': { background: 'rgba(75, 192, 192, 0.2)', border: 'rgba(75, 192, 192, 1)' },
+                'May': { background: 'rgba(153, 102, 255, 0.2)', border: 'rgba(153, 102, 255, 1)' },
+                'June': { background: 'rgba(255, 159, 64, 0.2)', border: 'rgba(255, 159, 64, 1)' },
+                'July': { background: 'rgba(199, 199, 199, 0.2)', border: 'rgba(199, 199, 199, 1)' },
+                'August': { background: 'rgba(83, 102, 255, 0.2)', border: 'rgba(83, 102, 255, 1)' },
+                'September': { background: 'rgba(255, 128, 64, 0.2)', border: 'rgba(255, 128, 64, 1)' },
+                'October': { background: 'rgba(192, 75, 192, 0.2)', border: 'rgba(192, 75, 192, 1)' },
+                'November': { background: 'rgba(102, 153, 255, 0.2)', border: 'rgba(102, 153, 255, 1)' },
+                'December': { background: 'rgba(128, 255, 128, 0.2)', border: 'rgba(128, 255, 128, 1)' }
+            };
 
-                        holidays.forEach(holiday => {
-                            const holidayDate = new Date(holiday.date);
-                            const monthName = holidayDate.toLocaleString('default', { month: 'long' });
-                            const daysUntil = Math.ceil((holidayDate - today) / (1000 * 60 * 60 * 24));
-                            listHtml += `<li>${holiday.title} - ${daysUntil >= 0 ? 'in ' + daysUntil + ' days' : Math.abs(daysUntil) + ' days ago'}</li>`;
-                            labels.push(holiday.title);
-                            daysUntilData.push(daysUntil);
-                            backgroundColors.push(monthColors[monthName].background);
-                            borderColors.push(monthColors[monthName].border);
-                            if (!monthGroups[monthName]) {
-                                monthGroups[monthName] = [];
-                            }
-                            monthGroups[monthName].push(labels.length - 1);
-                        });
-                        listHtml += '</ul>';
-                        $('#holidayList').html(listHtml);
-
-                        console.log("Preparing chart");
-                        var ctx = document.getElementById('holidayChart').getContext('2d');
-                        if (!ctx) {
-                            console.error("Failed to get context");
-                            return;
-                        }
-
-                        var holidayChart = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    label: 'Days Until Holiday',
-                                    data: daysUntilData,
-                                    backgroundColor: backgroundColors,
-                                    borderColor: borderColors,
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: {
-                                scales: {
-                                    y: {
-                                        beginAtZero: true
-                                    }
-                                },
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    }
-                                }
-                            },
-                            plugins: [{
-                                id: 'custom_labels',
-                                afterDatasetsDraw: function(chart, args, options) {
-                                    const ctx = chart.ctx;
-                                    Object.keys(monthGroups).forEach(month => {
-                                        const group = monthGroups[month];
-                                        const start = group[0];
-                                        const end = group[group.length - 1];
-                                        const xStart = chart.getDatasetMeta(0).data[start].x;
-                                        const xEnd = chart.getDatasetMeta(0).data[end].x;
-                                        const xMid = (xStart + xEnd) / 2;
-                                        const yPosition = Math.min(...group.map(index => chart.getDatasetMeta(0).data[index].y)) - 15;
-                                        ctx.save();
-                                        ctx.fillStyle = 'white';
-                                        ctx.fillRect(xMid - 20, yPosition - 12, 40, 16); // Draw white rectangle behind the text
-                                        ctx.fillStyle = monthColors[month].border;
-                                        ctx.font = '12px Arial';
-                                        ctx.textAlign = 'center';
-                                        ctx.fillText(month, xMid, yPosition);
-                                        ctx.restore();
-                                    });
-
-                                    // Mark the current date
-                                    const todayIndex = labels.findIndex(label => new Date(data.items.find(item => item.title === label).date) > today);
-                                    if (todayIndex > 0) {
-                                        const bar = chart.getDatasetMeta(0).data[todayIndex];
-                                        ctx.save();
-                                        ctx.strokeStyle = 'red';
-                                        ctx.lineWidth = 2;
-                                        ctx.beginPath();
-                                        ctx.moveTo(bar.x, chart.scales.y.top);
-                                        ctx.lineTo(bar.x, chart.chartArea.bottom);
-                                        ctx.stroke();
-                                        ctx.restore();
-                                    }
-                                }
-                            }]
-                        });
-                    },
-                    error: function() {
-                        console.error("Failed to fetch holiday data");
-                        $('#holidayList').text('Failed to fetch holiday data.');
-                    }
-                });
+            holidays.forEach(holiday => {
+                const holidayDate = new Date(holiday.date);
+                const monthName = holidayDate.toLocaleString('default', { month: 'long' });
+                const daysUntil = Math.ceil((holidayDate - today) / (1000 * 60 * 60 * 24));
+                const listItemClass = daysUntil < 0 ? "past-holiday" : "upcoming-holiday";
+                listHtml += `<li class="${listItemClass}">${holiday.title} - ${daysUntil >= 0 ? 'in ' + daysUntil + ' days' : Math.abs(daysUntil) + ' days ago'}</li>`;
+                labels.push(holiday.title);
+                daysUntilData.push(daysUntil);
+                backgroundColors.push(monthColors[monthName].background);
+                borderColors.push(monthColors[monthName].border);
+                if (!monthGroups[monthName]) {
+                    monthGroups[monthName] = [];
+                }
+                monthGroups[monthName].push(labels.length - 1);
             });
+            listHtml += '</ul>';
+            $('#holidayList').html(listHtml);
+
+            console.log("Preparing chart");
+            var ctx = document.getElementById('holidayChart').getContext('2d');
+            if (!ctx) {
+                console.error("Failed to get context");
+                return;
+            }
+
+            var holidayChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Days Until Holiday',
+                        data: daysUntilData,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'custom_labels',
+                    afterDatasetsDraw: function(chart, args, options) {
+                        const ctx = chart.ctx;
+                        Object.keys(monthGroups).forEach(month => {
+                            const group = monthGroups[month];
+                            const start = group[0];
+                            const end = group[group.length - 1];
+                            const xStart = chart.getDatasetMeta(0).data[start].x;
+                            const xEnd = chart.getDatasetMeta(0).data[end].x;
+                            const xMid = (xStart + xEnd) / 2;
+                            const yPosition = Math.min(...group.map(index => chart.getDatasetMeta(0).data[index].y)) - 15;
+                            ctx.save();
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(xMid - 20, yPosition - 12, 40, 16); // Draw white rectangle behind the text
+                            ctx.fillStyle = monthColors[month].border;
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(month, xMid, yPosition);
+                            ctx.restore();
+                        });
+
+                        // Mark the current date
+                        const todayIndex = labels.findIndex(label => new Date(data.items.find(item => item.title === label).date) > today);
+                        if (todayIndex > 0) {
+                            const bar = chart.getDatasetMeta(0).data[todayIndex];
+                            ctx.save();
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(bar.x, chart.scales.y.top);
+                            ctx.lineTo(bar.x, chart.chartArea.bottom);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                }]
+            });
+        },
+        error: function() {
+            console.error("Failed to fetch holiday data");
+            $('#holidayList').text('Failed to fetch holiday data.');
+        }
+    });
+});
+
         });
     </script>
 </body>
