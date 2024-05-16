@@ -88,6 +88,18 @@
         <div id="results"></div>
         <canvas id="workdaysChart"></canvas>
     </div>
+
+    <div class="api-section">
+        <h2>Comparison of Weekday Holidays</h2>
+        <label for="startYearSelect">Start Year:</label>
+        <select id="startYearSelect"></select>
+        <label for="endYearSelect">End Year:</label>
+        <select id="endYearSelect"></select>
+        <button onclick="updateComparison()">Update Comparison</button>
+        <canvas id="comparisonChart"></canvas>
+    </div>
+    
+    
     
     
     <div class="api-section">
@@ -146,70 +158,48 @@
 <script>
     $(document).ready(function() {
         const currentYear = new Date().getFullYear();
+    
+        // Populate year selection dropdowns
         for (let year = currentYear - 5; year <= currentYear + 5; year++) {
             $('#yearSelect').append(new Option(year, year));
+            $('#startYearSelect').append(new Option(year, year));
+            $('#endYearSelect').append(new Option(year, year));
         }
         $('#yearSelect').val(currentYear);
-        $('#includeTishaBav').change(function() {
-            console.log('Checkbox state changed, recalculating days off.');
-            calculateDaysOff();  // Re-calculate when checkbox changes
+        $('#startYearSelect').val(currentYear - 5);
+        $('#endYearSelect').val(currentYear + 5);
+    
+        // Initial calculations
+        calculateDaysOff();
+        updateComparison();
+    
+        // Re-calculate when changes are made
+        $('#yearSelect, #includeTishaBav').change(function() {
+            calculateDaysOff();
         });
-        calculateDaysOff();  // Perform initial calculation
+        $('#startYearSelect, #endYearSelect').change(function() {
+            updateComparison();
+        });
     });
-
-    var workdaysChart = null; // Hold the chart instance globally
-
+    
+    var workdaysChart = null; // Hold the pie chart instance globally
+    var comparisonChart = null; // Hold the line chart instance globally
+    
     function calculateDaysOff() {
         const year = $('#yearSelect').val();
         const includeTishaBav = $('#includeTishaBav').is(':checked');
-        console.log(`Calculating days off for year: ${year} with Tish'a B'Av included: ${includeTishaBav}`);
-
-        const apiUrl = `https://www.hebcal.com/hebcal/?v=1&cfg=json&year=${year}&maj=on&min=on&mod=on&nx=on&s=on`;
-
-        $.getJSON(apiUrl, function(data) {
-            const holidays = [
-                'Pesach I', 'Pesach II', 'Pesach VII', 'Pesach VIII',
-                'Shavuot I', 'Shavuot II',
-                'Rosh Hashana', 'Rosh Hashana II',
-                'Yom Kippur', 'Sukkot I', 'Sukkot II',
-                'Shmini Atzeret', 'Simchat Torah'
-            ];
-
-            if (includeTishaBav) {
-                holidays.push("Tish’a B’Av");
-            }
-
-            console.log('Holidays considered:', holidays.join(', '));
-
-            let totalDaysOff = 0;
-            let details = '';
-
-            data.items.forEach(item => {
-                const date = new Date(item.date);
-                const dayOfWeek = date.getDay();
-                const isHoliday = holidays.includes(item.title) && dayOfWeek >= 1 && dayOfWeek <= 5;
-
-                console.log(`Checking holiday: ${item.title}, Date: ${date.toISOString().split('T')[0]}, Day of Week: ${dayOfWeek}, Is Included: ${isHoliday}`);
-
-                if (isHoliday) {
-                    totalDaysOff++;
-                    details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday.</li>`;
-                }
-            });
-
-            console.log(`Total holidays requiring days off: ${totalDaysOff}`);
-
+        fetchHolidayData(year, includeTishaBav, function(totalDaysOff, details) {
             $('#results').html(`You need to take <strong>${totalDaysOff}</strong> days off work in ${year}.`);
             $('#results').append(`<ul>${details}</ul>`);
-
-            if (workdaysChart) workdaysChart.destroy();  // Destroy the existing chart
+    
+            if (workdaysChart) workdaysChart.destroy();
             var ctx = document.getElementById('workdaysChart').getContext('2d');
             workdaysChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: ['Workday Holidays', 'Total Holidays'],
                     datasets: [{
-                        data: [totalDaysOff, holidays.length - totalDaysOff],
+                        data: [totalDaysOff, details.split('</li>').length - 1],
                         backgroundColor: ['#4CAF50', '#DDDDDD'],
                         hoverBackgroundColor: ['#45a049', '#CCCCCC']
                     }]
@@ -223,12 +213,87 @@
                     }
                 }
             });
-        }).fail(function() {
-            console.error('Failed to fetch holiday data');
-            $('#results').html('Failed to load holiday data.');
         });
     }
-</script>
+    
+    function updateComparison() {
+        const startYear = parseInt($('#startYearSelect').val());
+        const endYear = parseInt($('#endYearSelect').val());
+        const years = [];
+        const daysOff = [];
+    
+        for (let year = startYear; year <= endYear; year++) {
+            years.push(year);
+            fetchHolidayData(year, $('#includeTishaBav').is(':checked'), function(totalDaysOff) {
+                daysOff.push(totalDaysOff);
+                if (daysOff.length === years.length) { // Ensure all requests have completed
+                    if (comparisonChart) comparisonChart.destroy();
+                    var ctx = document.getElementById('comparisonChart').getContext('2d');
+                    comparisonChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: years,
+                            datasets: [{
+                                label: 'Workday Holidays',
+                                data: daysOff,
+                                fill: false,
+                                borderColor: '#4CAF50',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+    
+    function fetchHolidayData(year, includeTishaBav, callback) {
+    const holidays = [
+        'Pesach I', 'Pesach II', 'Pesach VII', 'Pesach VIII',
+        'Shavuot I', 'Shavuot II',
+        'Rosh Hashana', 'Rosh Hashana II',
+        'Yom Kippur', 'Sukkot I', 'Sukkot II',
+        'Shmini Atzeret', 'Simchat Torah'
+    ];
+    if (includeTishaBav) {
+        holidays.push("Tish’a B’Av");
+    }
+
+    const apiUrl = `https://www.hebcal.com/hebcal/?v=1&cfg=json&year=${year}&maj=on&min=on&mod=on&nx=on&s=on`;
+    $.getJSON(apiUrl, function(data) {
+        let totalDaysOff = 0;
+        let details = '';
+
+        data.items.forEach(item => {
+            const date = new Date(item.date);
+            // Add one day to adjust for sunset start
+            date.setDate(date.getDate() + 1);
+
+            const dayOfWeek = date.getDay();
+            if (holidays.includes(item.title) && dayOfWeek >= 1 && dayOfWeek <= 5) {
+                totalDaysOff++;
+                details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday.</li>`;
+            }
+        });
+
+        callback(totalDaysOff, details);
+    }).fail(function() {
+        console.error('Failed to fetch holiday data for ' + year);
+        callback(0, ''); // Return 0 days off if failed
+    });
+}
+
+    
+    </script>
+    
 
 
 
@@ -241,6 +306,8 @@
     
     
     <script>
+
+        
         $(document).ready(function() {
             console.log("Document ready");
 
@@ -454,5 +521,7 @@
 
         });
     </script>
+
+    
 </body>
 </html>
