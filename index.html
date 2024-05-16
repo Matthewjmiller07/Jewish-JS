@@ -91,13 +91,14 @@
 
     <div class="api-section">
         <h2>Comparison of Weekday Holidays</h2>
-        <label for="startYearSelect">Start Year:</label>
-        <select id="startYearSelect"></select>
-        <label for="endYearSelect">End Year:</label>
-        <select id="endYearSelect"></select>
+        <label for="startYearInput">Start Year:</label>
+        <input type="number" id="startYearInput" value="2020" min="1900" max="2100">
+        <label for="endYearInput">End Year:</label>
+        <input type="number" id="endYearInput" value="2025" min="1900" max="2100">
         <button onclick="updateComparison()">Update Comparison</button>
         <canvas id="comparisonChart"></canvas>
     </div>
+    
     
     
     
@@ -217,43 +218,52 @@
     }
     
     function updateComparison() {
-        const startYear = parseInt($('#startYearSelect').val());
-        const endYear = parseInt($('#endYearSelect').val());
-        const years = [];
-        const daysOff = [];
-    
-        for (let year = startYear; year <= endYear; year++) {
-            years.push(year);
-            fetchHolidayData(year, $('#includeTishaBav').is(':checked'), function(totalDaysOff) {
-                daysOff.push(totalDaysOff);
-                if (daysOff.length === years.length) { // Ensure all requests have completed
-                    if (comparisonChart) comparisonChart.destroy();
-                    var ctx = document.getElementById('comparisonChart').getContext('2d');
-                    comparisonChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: years,
-                            datasets: [{
-                                label: 'Workday Holidays',
-                                data: daysOff,
-                                fill: false,
-                                borderColor: '#4CAF50',
-                                tension: 0.1
-                            }]
+    const startYear = parseInt($('#startYearInput').val()); // Use the correct ID for the input
+    const endYear = parseInt($('#endYearInput').val()); // Use the correct ID for the input
+    const years = [];
+    const daysOff = [];
+    let dataFetched = 0; // Counter to track how many requests have completed
+
+    for (let year = startYear; year <= endYear; year++) {
+        years.push(year);
+        fetchHolidayData(year, $('#includeTishaBav').is(':checked'), function(totalDaysOff) {
+            daysOff[year - startYear] = totalDaysOff; // Place data in the correct position
+            dataFetched++;
+
+            if (dataFetched === years.length) { // Ensure all requests have completed
+                if (comparisonChart) comparisonChart.destroy();
+                var ctx = document.getElementById('comparisonChart').getContext('2d');
+                comparisonChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: [{
+                            label: 'Workday Holidays',
+                            data: daysOff,
+                            fill: false,
+                            borderColor: '#4CAF50',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
                         },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                }
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
                             }
                         }
-                    });
-                }
-            });
-        }
+                    }
+                });
+            }
+        });
     }
+}
+
     
     function fetchHolidayData(year, includeTishaBav, callback) {
     const holidays = [
@@ -274,13 +284,14 @@
 
         data.items.forEach(item => {
             const date = new Date(item.date);
-            // Add one day to adjust for sunset start
-            date.setDate(date.getDate() + 1);
-
+            date.setDate(date.getDate() + 1); // Adjust for sunset start
             const dayOfWeek = date.getDay();
+            const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const dayName = weekdayNames[dayOfWeek];
+
             if (holidays.includes(item.title) && dayOfWeek >= 1 && dayOfWeek <= 5) {
                 totalDaysOff++;
-                details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday.</li>`;
+                details += `<li>${item.title} falls on ${date.toLocaleDateString()} (${dayName}), which is a weekday.</li>`;
             }
         });
 
@@ -290,6 +301,7 @@
         callback(0, ''); // Return 0 days off if failed
     });
 }
+
 
     
     </script>
