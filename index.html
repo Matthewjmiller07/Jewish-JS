@@ -267,7 +267,9 @@
 
                 if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Monday to Friday
                     totalDaysOff++;
-                    details += `<li>${item.title} falls on ${date.toLocaleDateString()} (${dayName}), which is a weekday.</li>`;
+                    details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday. 
+<a href="#" onclick="addToGoogleCalendar('${item.title}', '${date.toISOString()}')">Add to Google Calendar</a></li>`;
+
                 }
             }
         });
@@ -558,6 +560,29 @@
 });
 
         });
+
+        function addToGoogleCalendar(title, startDate) {
+    const formatDate = (date) => {
+        // Format as YYYYMMDD for all-day events
+        return date.toISOString().substring(0, 10).replace(/-/g, '');
+    };
+
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 1); // Set the end date to the next day for all-day events
+
+    const url = [
+        'https://calendar.google.com/calendar/render',
+        '?action=TEMPLATE',
+        `&text=${encodeURIComponent(title)}`,
+        `&dates=${formatDate(start)}/${formatDate(end)}`,
+        '&details=' + encodeURIComponent(`Added via Jewish Holiday Calendar.`)
+    ].join('');
+
+    window.open(url, '_blank'); // Open the link in a new tab
+}
+
+
     </script>
 
     
