@@ -7,69 +7,151 @@
     <title>Jewish APIs Demo</title>
     <style>
         body {
-            font-family: 'Noto Sans Hebrew', sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        h1, h2 {
-            color: #333;
-            text-align: center;
-        }
-        .api-section, .container {
-            background-color: white;
-            border: 2px solid #ddd;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        button, select, input[type="checkbox"] {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        p {
-            font-size: 14px;
-            color: #555;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f8f8f8;
-        }
-        .past-holiday {
-            color: #888; /* Grey out past holidays */
-        }
-        .upcoming-holiday {
-            color: #4CAF50; /* Highlight upcoming holidays */
-        }
-        .center {
-            text-align: center;
-        }
-        #workdaysChart {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+h1, h2 {
+    color: #333;
+    text-align: center;
+}
+.api-section, .container {
+    background-color: white;
+    border: 2px solid #ddd;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+button, select, input[type="checkbox"] {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+button:hover {
+    background-color: #45a049;
+}
+p {
+    font-size: 14px;
+    color: #555;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    background-color: #f8f8f8;
+}
+.past-holiday {
+    color: #888; /* Grey out past holidays */
+}
+.upcoming-holiday {
+    color: #4CAF50; /* Highlight upcoming holidays */
+}
+.center {
+    text-align: center;
+}
+#workdaysChart {
     max-width: 300px;
     max-height: 300px;
     width: 100%;
     height: auto;
 }
+#holidayCalendar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 10px;
+    margin-top: 20px;
+}
+.calendar-month {
+    flex: 1 1 45%;
+    max-width: 45%;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+    min-height: 500px; /* Ensure enough height for month */
+    margin-bottom: 20px;
+}
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.calendar-day, .calendar-day-header {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    font-size: 1em;
+}
+.calendar-day.empty {
+    background-color: #f4f4f4;
+}
+.calendar-day.holiday {
+    background-color: #ffcccc;
+}
+.calendar-day-header {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+.calendar-month h3 {
+    text-align: center;
+    font-size: 1.2em;
+    margin: 5px 0;
+}
+
+@media (max-width: 1024px) {
+    .calendar-month {
+        flex: 1 1 100%;
+        max-width: 100%;
+        min-height: 450px;
+    }
+}
+
+@media (max-width: 768px) {
+    .calendar-day, .calendar-day-header {
+        padding: 5px;
+        font-size: 0.8em;
+    }
+    .calendar-month {
+        padding: 10px;
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-day, .calendar-day-header {
+        padding: 5px;
+        font-size: 0.7em;
+    }
+    .calendar-month {
+        padding: 10px;
+        min-height: 350px;
+    }
+}
+
+
+
+
+
+
     </style>
     
     
@@ -98,6 +180,11 @@
         <button onclick="calculateDaysOff()">Calculate Days Off</button>
         <div id="results"></div>
         <canvas id="workdaysChart"></canvas>
+    </div>
+
+    <div class="api-section">
+        <h2>Calendar of Weekday Holidays</h2>
+        <div id="holidayCalendar"></div>
     </div>
 
     <div class="api-section">
@@ -193,41 +280,7 @@
     var workdaysChart = null; // Hold the pie chart instance globally
     var comparisonChart = null; // Hold the line chart instance globally
     
-    function calculateDaysOff() {
-    const currentYear = new Date().getFullYear();
-    const selectedYear = $('#yearSelect').val();
-    const includeTishaBav = $('#includeTishaBav').is(':checked');
 
-    fetchHolidayData(selectedYear, includeTishaBav, function(totalDaysOff, totalHolidays, holidayDetails) {
-        // Determine if the selected year is in the past
-        const isPast = selectedYear < currentYear;
-        const verbTense = isPast ? "needed" : "need";
-
-        $('#results').html(`You ${verbTense} to take <strong>${totalDaysOff}</strong> workday holidays off work in ${selectedYear}.<ul>${holidayDetails}</ul>`);
-
-        if (workdaysChart) workdaysChart.destroy();
-        var ctx = document.getElementById('workdaysChart').getContext('2d');
-        workdaysChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ['Workday Holidays', 'Weekend Holidays'],
-                datasets: [{
-                    data: [totalDaysOff, totalHolidays - totalDaysOff],
-                    backgroundColor: ['#4CAF50', '#DDDDDD'],
-                    hoverBackgroundColor: ['#45a049', '#CCCCCC']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
-                }
-            }
-        });
-    });
-}
 
     
     function fetchHolidayData(year, includeTishaBav, callback) {
@@ -581,6 +634,119 @@
 
     window.open(url, '_blank'); // Open the link in a new tab
 }
+
+function calculateDaysOff() {
+    const currentYear = new Date().getFullYear();
+    const selectedYear = $('#yearSelect').val();
+    const includeTishaBav = $('#includeTishaBav').is(':checked');
+
+    fetchHolidayData(selectedYear, includeTishaBav, function(totalDaysOff, totalHolidays, holidayDetails) {
+        // Determine if the selected year is in the past
+        const isPast = selectedYear < currentYear;
+        const verbTense = isPast ? "needed" : "need";
+
+        $('#results').html(`You ${verbTense} to take <strong>${totalDaysOff}</strong> workday holidays off work in ${selectedYear}.<ul>${holidayDetails}</ul>`);
+
+        if (workdaysChart) workdaysChart.destroy();
+        var ctx = document.getElementById('workdaysChart').getContext('2d');
+        workdaysChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Workday Holidays', 'Weekend Holidays'],
+                datasets: [{
+                    data: [totalDaysOff, totalHolidays - totalDaysOff],
+                    backgroundColor: ['#4CAF50', '#DDDDDD'],
+                    hoverBackgroundColor: ['#45a049', '#CCCCCC']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+
+        // Call displayHolidayCalendar after results are populated
+        displayHolidayCalendar();
+    });
+}
+
+function displayHolidayCalendar() {
+    console.log("Starting to display holiday calendar");
+
+    const results = $('#results').find('ul li');
+    const holidays = [];
+
+    results.each(function() {
+        const holidayText = $(this).text();
+        console.log("Processing result item:", holidayText);
+        
+        const match = holidayText.match(/(.+?)\sfalls\son\s(\w+),\s(\d+\/\d+\/\d+)\s\(which is a weekday\)/);
+        if (match) {
+            const holiday = {
+                title: match[1],
+                day: match[2],
+                date: new Date(match[3])
+            };
+            holidays.push(holiday);
+            console.log("Parsed holiday:", holiday);
+        } else {
+            console.log("No match for item:", holidayText);
+        }
+    });
+
+    console.log("All parsed holidays:", holidays);
+
+    const calendar = $('#holidayCalendar');
+    calendar.empty();
+
+    const currentYear = holidays.length > 0 ? holidays[0].date.getFullYear() : new Date().getFullYear();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    for (let month = 0; month < 12; month++) {
+        const firstDay = new Date(currentYear, month, 1).getDay();
+        const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+
+        console.log(`Processing month: ${monthNames[month]}, firstDay: ${firstDay}, daysInMonth: ${daysInMonth}`);
+
+        const monthDiv = $('<div class="calendar-month"></div>').append(`<h3>${monthNames[month]}</h3>`);
+        const daysGrid = $('<div class="calendar-days"></div>').css('display', 'grid').css('grid-template-columns', 'repeat(7, 1fr)');
+
+        // Add day headers
+        for (let i = 0; i < 7; i++) {
+            daysGrid.append(`<div class="calendar-day-header">${weekdayNames[i]}</div>`);
+        }
+
+        for (let i = 0; i < firstDay; i++) {
+            daysGrid.append('<div class="calendar-day empty"></div>');
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(currentYear, month, day);
+            const holiday = holidays.find(holiday => holiday.date.toDateString() === date.toDateString());
+            const dayDiv = $('<div class="calendar-day"></div>').text(day);
+            if (holiday) {
+                console.log(`Found holiday on ${date.toDateString()}: ${holiday.title}`);
+                dayDiv.addClass('holiday').append(`<br>${holiday.title}`);
+            }
+            daysGrid.append(dayDiv);
+        }
+
+        monthDiv.append(daysGrid);
+        calendar.append(monthDiv);
+    }
+}
+
+// Call this function after the results section is populated
+displayHolidayCalendar();
+
+
+
+
 
 
     </script>
