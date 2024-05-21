@@ -267,7 +267,7 @@
 
                 if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Monday to Friday
                     totalDaysOff++;
-                    details += `<li>${item.title} falls on ${date.toLocaleDateString()}, which is a weekday. 
+                    details += `<li>${item.title} falls on ${dayName}, ${date.toLocaleDateString()} (which is a weekday). 
 <a href="#" onclick="addToGoogleCalendar('${item.title}', '${date.toISOString()}')">Add to Google Calendar</a></li>`;
 
                 }
