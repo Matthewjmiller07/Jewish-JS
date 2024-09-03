@@ -316,6 +316,8 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
     }
 
     const series = [];
+    let minTime = Infinity;
+    let maxTime = -Infinity;
 
     selectedZmanim.forEach(zman => {
         cities.forEach((city, cityIndex) => {
@@ -331,6 +333,10 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
                         if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
                             const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
                             data.push([parsedDate.getTime(), timeInHours]);
+
+                            // Update min and max times for y-axis range
+                            if (timeInHours < minTime) minTime = timeInHours;
+                            if (timeInHours > maxTime) maxTime = timeInHours;
                         } else {
                             console.warn(`Invalid time for ${zman} on ${date}`);
                         }
@@ -343,13 +349,25 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
 
                 series.push({
                     name: `${formatZmanName(zman)} - ${city}`,
-                    data: data.sort((a, b) => a[0] - b[0])
+                    data: data.sort((a, b) => a[0] - b[0]),
+                    type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
+                    markers: {
+                        size: 8, // Increase marker size for better visibility
+                    },
+                    stroke: {
+                        width: startDate === endDate ? 0 : 2, // No line for single date
+                    }
                 });
             }
         });
     });
 
     console.log('Final Chart Series Data:', series);
+
+    // Apply some padding to the min and max time for better visualization
+    const padding = 0.5; // 30 minutes of padding on both ends
+    minTime = Math.max(minTime - padding, 0); // Ensure minTime doesn't go below 0
+    maxTime = Math.min(maxTime + padding, 24); // Ensure maxTime doesn't go above 24
 
     const options = {
         chart: {
@@ -367,23 +385,32 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
             },
             labels: {
                 format: 'yyyy-MM-dd'
-            }
+            },
+            tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
         },
         yaxis: {
             title: {
-                text: 'Time (hours)'
+                text: 'Time'
             },
+            min: minTime,
+            max: maxTime,
             labels: {
                 formatter: function(value) {
-                    return value.toFixed(2);
+                    const hours = Math.floor(value);
+                    const minutes = Math.round((value - hours) * 60);
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
+                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
                 }
-            }
+            },
+            tickAmount: 12 // Adjust this for better granularity based on the range
         },
         stroke: {
             curve: 'smooth'
         },
         markers: {
-            size: 4
+            size: 6, // Adjust marker size for better distinction
+            colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
         },
         tooltip: {
             x: {
@@ -393,7 +420,22 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
                 formatter: function(value) {
                     const hours = Math.floor(value);
                     const minutes = Math.round((value - hours) * 60);
-                    return `${hours}h ${minutes}m`;
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
+                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
+                }
+            }
+        },
+        grid: {
+            show: true, // Enable grid to help differentiate times
+            xaxis: {
+                lines: {
+                    show: true
+                }
+            },
+            yaxis: {
+                lines: {
+                    show: true
                 }
             }
         }
