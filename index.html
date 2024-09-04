@@ -191,7 +191,7 @@
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Handle map click event to get lat/lng
+    // Handle map click event
     map.on('click', async function(e) {
         const lat = e.latlng.lat.toFixed(4);
         const lng = e.latlng.lng.toFixed(4);
@@ -205,74 +205,63 @@
         }
     });
 
-    // Move the map to the selected city when 'Get Zmanim' is clicked
-    document.getElementById('zmanim-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    // Function to fetch and display Zmanim based on lat/long
+    // Remove this block of code
+    async function updateZmanimData(lat, lng) {
+    try {
+        const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
+        const zmanimData = await fetchZmanimForLocation(lat, lng);
+        const cityName = await getCityFromLatLong(lat, lng);
+        const locationLabel = `Location: ${lat}, ${lng} (${cityName})`;
 
-        const latLng = document.querySelector('#cities-container input').value.split(', ');
-        const lat = parseFloat(latLng[0]);
-        const lng = parseFloat(latLng[1]);
+        // Display and create chart based on fetched Zmanim data
+        displayResults([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end);
+        createChart([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end, selectedZmanim);
+    } catch (error) {
+        console.error("Error fetching Zmanim data:", error);
+    }
+}
+});
 
-        // Move the map view to the specified city
-        map.setView([lat, lng], 10);
-
-        // Fetch and display Zmanim data for the given lat/lng
-        await updateZmanimData(lat, lng);
+// Fetch Zmanim data for a specific latitude and longitude
+async function fetchZmanimForLocation(lat, lng) {
+    const params = new URLSearchParams({
+        cfg: 'json',
+        latitude: lat,
+        longitude: lng,
+        start: document.getElementById('start-date').value,
+        end: document.getElementById('end-date').value || document.getElementById('start-date').value,
+        b: '18',
+        M: 'on',
+        m: '50'
     });
 
-    // Function to fetch and display Zmanim based on lat/long
-    async function updateZmanimData(lat, lng) {
-        try {
-            const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
-            const zmanimData = await fetchZmanimForLocation(lat, lng);
-            const cityName = await getCityFromLatLong(lat, lng);
-            const locationLabel = `Location: ${lat}, ${lng} (${cityName})`;
-
-            // Display results and create chart based on fetched Zmanim data
-            displayResults([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end);
-            createChart([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end, selectedZmanim);
-        } catch (error) {
-            console.error("Error fetching Zmanim data:", error);
-        }
+    const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error('Failed to fetch Zmanim data');
     }
+    const data = await response.json();
 
-    // Fetch Zmanim data for a specific latitude and longitude
-    async function fetchZmanimForLocation(lat, lng) {
-        const params = new URLSearchParams({
-            cfg: 'json',
-            latitude: lat,
-            longitude: lng,
-            start: document.getElementById('start-date').value,
-            end: document.getElementById('end-date').value || document.getElementById('start-date').value,
-            b: '18',
-            M: 'on',
-            m: '50'
-        });
+    console.log('Zmanim Data for Clicked Location:', data);
+    return data;
+}
 
-        const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('API Error:', errorData);
-            throw new Error('Failed to fetch Zmanim data');
-        }
-        const data = await response.json();
-
-        console.log('Zmanim Data for Clicked Location:', data);
-        return data;
+async function getCityFromLatLong(lat, lng) {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
+    const data = await response.json();
+    
+    if (data && data.address && data.address.city) {
+        return data.address.city;
+    } else if (data && data.address && data.address.town) {
+        return data.address.town;
+    } else if (data && data.address && data.address.village) {
+        return data.address.village;
+    } else {
+        return "Unknown Location";
     }
-
-    // Function to get city name from lat/lng using Nominatim API
-    async function getCityFromLatLong(lat, lng) {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
-        const data = await response.json();
-
-        if (data && data.address) {
-            return data.address.city || data.address.town || data.address.village || "Unknown Location";
-        } else {
-            return "Unknown Location";
-        }
-    }
-});
+}
 
         function populateZmanimCheckboxes() {
             const container = document.getElementById('zmanim-select');
@@ -332,16 +321,34 @@
     }
 });
 
-async function fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim) {
-    const params = new URLSearchParams({
-        cfg: 'json',
-        city: city,
-        start: startDate,
-        end: endDate,
-        b: '18',
-        M: 'on',
-        m: '50'
-    });
+async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selectedZmanim) {
+    let params;
+
+    if (typeof cityOrLatLng === 'string' && cityOrLatLng.includes(',')) {
+        // Treat as lat/long if a comma is present
+        const [latitude, longitude] = cityOrLatLng.split(',').map(coord => coord.trim());
+        params = new URLSearchParams({
+            cfg: 'json',
+            latitude: latitude,
+            longitude: longitude,
+            start: startDate,
+            end: endDate,
+            b: '18',
+            M: 'on',
+            m: '50'
+        });
+    } else {
+        // Treat as city name
+        params = new URLSearchParams({
+            cfg: 'json',
+            city: cityOrLatLng,
+            start: startDate,
+            end: endDate,
+            b: '18',
+            M: 'on',
+            m: '50'
+        });
+    }
 
     const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
     const data = await response.json();
@@ -351,7 +358,7 @@ async function fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim)
 
     // Ensure the data structure is uniform, whether for single or multiple dates
     if (!data.times || Object.keys(data.times).length === 0) {
-        return { times: {}, location: { latitude: 0, longitude: 0 } }; // Return default lat/long if no data
+        return { times: {} }; // Return an empty times object if no data is found
     }
 
     if (startDate === endDate) {
