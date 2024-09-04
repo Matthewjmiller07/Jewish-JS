@@ -207,11 +207,14 @@
 
     // Function to fetch and display Zmanim based on lat/long
     // Remove this block of code
-async function updateZmanimData(lat, lng) {
+    async function updateZmanimData(lat, lng) {
     try {
+        const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
         const zmanimData = await fetchZmanimForLocation(lat, lng);
-        const locationLabel = `Location: ${lat}, ${lng}`;
-        
+        const cityName = await getCityFromLatLong(lat, lng);
+        const locationLabel = `Location: ${lat}, ${lng} (${cityName})`;
+
+        // Display and create chart based on fetched Zmanim data
         displayResults([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end);
         createChart([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end, selectedZmanim);
     } catch (error) {
@@ -243,6 +246,21 @@ async function fetchZmanimForLocation(lat, lng) {
 
     console.log('Zmanim Data for Clicked Location:', data);
     return data;
+}
+
+async function getCityFromLatLong(lat, lng) {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
+    const data = await response.json();
+    
+    if (data && data.address && data.address.city) {
+        return data.address.city;
+    } else if (data && data.address && data.address.town) {
+        return data.address.town;
+    } else if (data && data.address && data.address.village) {
+        return data.address.village;
+    } else {
+        return "Unknown Location";
+    }
 }
 
         function populateZmanimCheckboxes() {
@@ -352,47 +370,27 @@ async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selecte
     return data;
 }
 
-        function displayResults(zmanimData, cities, startDate, endDate) {
+function displayResults(zmanimData, cities, startDate, endDate) {
     const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
     const resultsDiv = document.getElementById('results');
-    let html = `<h2>Zmanim Comparison (${startDate} to ${endDate})</h2>`;
-
-    // Debugging: Log the selected Zmanim
-    console.log("Selected Zmanim:", selectedZmanim);
+    let html = `<h2>Zmanim Comparison (${startDate || 'N/A'} to ${endDate || 'N/A'})</h2>`;
 
     cities.forEach((city, index) => {
         const cityData = zmanimData[index];
+        const cityName = cityData.location?.title || city; // Extract city name from the response
 
-        // Debugging: Log the city and cityData
-        console.log("City:", city);
-        console.log("City Data:", cityData);
-
-        html += `<h3>${city}</h3>`;
+        html += `<h3>${cityName} (${city})</h3>`;  // Display city name and lat/long
 
         if (cityData && cityData.times) {
             const times = cityData.times;
-
-            // Debugging: Log the times object
-            console.log("Times:", times);
-
             let cityHtml = '<ul>';
 
             selectedZmanim.forEach(zman => {
-                // Debugging: Log each zman key
-                console.log("Processing Zman:", zman);
-
                 if (times[zman]) {
                     Object.entries(times[zman]).forEach(([date, time]) => {
-                        // Debugging: Log the date and time being processed
-                        console.log(`Date: ${date}, Time: ${time}`);
-
                         if (time) {
                             const zmanTime = new Date(time);
-
-                            // Debugging: Log the parsed zmanTime
-                            console.log("Zman Time:", zmanTime);
-
-                            if (!isNaN(zmanTime)) {
+                            if (!isNaN(zmanTime.getTime())) { // Ensure the date is valid
                                 const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime}</li>`;
                             } else {
@@ -410,150 +408,146 @@ async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selecte
             cityHtml += '</ul>';
             html += cityHtml;
         } else {
-            html += '<p>No data available for this city.</p>';
+            html += '<p>No data available for this location.</p>';
         }
     });
-
-    // Debugging: Log the final HTML before setting it
-    console.log("Final HTML:", html);
 
     resultsDiv.innerHTML = html;
 }
 
-        function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
-            if (chart) {
-                chart.destroy();
-            }
+function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
+    if (chart) {
+        chart.destroy();
+    }
 
-            const series = [];
-            let minTime = Infinity;
-            let maxTime = -Infinity;
+    const series = [];
+    let minTime = Infinity;
+    let maxTime = -Infinity;
 
-            selectedZmanim.forEach(zman => {
-                cities.forEach((city, cityIndex) => {
-                    const data = [];
-                    const cityData = zmanimData[cityIndex];
+    selectedZmanim.forEach(zman => {
+        cities.forEach((city, cityIndex) => {
+            const data = [];
+            const cityData = zmanimData[cityIndex];
+            const cityName = cityData.location?.title || city; // Extract city name from the response
 
-                    if (cityData.times[zman]) {
-                        Object.entries(cityData.times[zman]).forEach(([date, time]) => {
-                            if (time) {
-                                const parsedDate = new Date(date + 'T00:00:00'); // Parse the date only
-                                const zmanTime = new Date(time);
+            if (cityData.times[zman]) {
+                Object.entries(cityData.times[zman]).forEach(([date, time]) => {
+                    if (time) {
+                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date only
+                        const zmanTime = new Date(time);
 
-                                if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
-                                    const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
-                                    data.push([parsedDate.getTime(), timeInHours]);
+                        if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
+                            const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
+                            data.push([parsedDate.getTime(), timeInHours]);
 
-                                    // Update min and max times for y-axis range
-                                    if (timeInHours < minTime) minTime = timeInHours;
-                                    if (timeInHours > maxTime) maxTime = timeInHours;
-                                } else {
-                                    console.warn(`Invalid time for ${zman} on ${date}`);
-                                }
-                            }
-                        });
-                    }
-
-                    if (data.length > 0) {
-                        console.log(`Series Data for ${formatZmanName(zman)} - ${city}:`, data);
-
-                        series.push({
-                            name: `${formatZmanName(zman)} - ${city}`,
-                            data: data.sort((a, b) => a[0] - b[0]),
-                            type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
-                            markers: {
-                                size: 8, // Increase marker size for better visibility
-                            },
-                            stroke: {
-                                width: startDate === endDate ? 0 : 2, // No line for single date
-                            }
-                        });
+                            // Update min and max times for y-axis range
+                            if (timeInHours < minTime) minTime = timeInHours;
+                            if (timeInHours > maxTime) maxTime = timeInHours;
+                        }
                     }
                 });
-            });
+            }
 
-            console.log('Final Chart Series Data:', series);
+            if (data.length > 0) {
+                console.log(`Series Data for ${formatZmanName(zman)} - ${cityName}:`, data);
 
-            // Apply some padding to the min and max time for better visualization
-            const padding = 0.5; // 30 minutes of padding on both ends
-            minTime = Math.max(minTime - padding, 0); // Ensure minTime doesn't go below 0
-            maxTime = Math.min(maxTime + padding, 24); // Ensure maxTime doesn't go above 24
+                series.push({
+                    name: `${formatZmanName(zman)} - ${cityName}`,
+                    data: data.sort((a, b) => a[0] - b[0]),
+                    type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
+                    markers: {
+                        size: 8, // Increase marker size for better visibility
+                    },
+                    stroke: {
+                        width: startDate === endDate ? 0 : 2, // No line for single date
+                    }
+                });
+            }
+        });
+    });
 
-            const options = {
-                chart: {
-                    type: 'line',
-                    height: 400,
-                    toolbar: {
-                        show: true
-                    }
-                },
-                series: series,
-                xaxis: {
-                    type: 'datetime',
-                    title: {
-                        text: 'Date'
-                    },
-                    labels: {
-                        format: 'yyyy-MM-dd'
-                    },
-                    tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
-                },
-                yaxis: {
-                    title: {
-                        text: 'Time'
-                    },
-                    min: minTime,
-                    max: maxTime,
-                    labels: {
-                        formatter: function(value) {
-                            const hours = Math.floor(value);
-                            const minutes = Math.round((value - hours) * 60);
-                            const ampm = hours >= 12 ? 'PM' : 'AM';
-                            const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
-                            return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
-                        }
-                    },
-                    tickAmount: 12 // Adjust this for better granularity based on the range
-                },
-                stroke: {
-                    curve: 'smooth'
-                },
-                markers: {
-                    size: 6, // Adjust marker size for better distinction
-                    colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
-                },
-                tooltip: {
-                    x: {
-                        format: 'yyyy-MM-dd'
-                    },
-                    y: {
-                        formatter: function(value) {
-                            const hours = Math.floor(value);
-                            const minutes = Math.round((value - hours) * 60);
-                            const ampm = hours >= 12 ? 'PM' : 'AM';
-                            const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
-                            return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
-                        }
-                    }
-                },
-                grid: {
-                    show: true, // Enable grid to help differentiate times
-                    xaxis: {
-                        lines: {
-                            show: true
-                        }
-                    },
-                    yaxis: {
-                        lines: {
-                            show: true
-                        }
-                    }
+    console.log('Final Chart Series Data:', series);
+
+    // Apply padding to the min and max time for better visualization
+    const padding = 0.5;
+    minTime = Math.max(minTime - padding, 0);
+    maxTime = Math.min(maxTime + padding, 24);
+
+    const options = {
+        chart: {
+            type: 'line',
+            height: 400,
+            toolbar: {
+                show: true
+            }
+        },
+        series: series,
+        xaxis: {
+            type: 'datetime',
+            title: {
+                text: 'Date'
+            },
+            labels: {
+                format: 'yyyy-MM-dd'
+            },
+            tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
+        },
+        yaxis: {
+            title: {
+                text: 'Time'
+            },
+            min: minTime,
+            max: maxTime,
+            labels: {
+                formatter: function(value) {
+                    const hours = Math.floor(value);
+                    const minutes = Math.round((value - hours) * 60);
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 || 12;
+                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
                 }
-            };
-
-            chart = new ApexCharts(document.querySelector("#zmanim-chart"), options);
-            chart.render();
+            },
+            tickAmount: 12
+        },
+        stroke: {
+            curve: 'smooth'
+        },
+        markers: {
+            size: 6,
+            colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
+        },
+        tooltip: {
+            x: {
+                format: 'yyyy-MM-dd'
+            },
+            y: {
+                formatter: function(value) {
+                    const hours = Math.floor(value);
+                    const minutes = Math.round((value - hours) * 60);
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    const formattedHours = hours % 12 || 12;
+                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
+                }
+            }
+        },
+        grid: {
+            show: true,
+            xaxis: {
+                lines: {
+                    show: true
+                }
+            },
+            yaxis: {
+                lines: {
+                    show: true
+                }
+            }
         }
+    };
+
+    chart = new ApexCharts(document.querySelector("#zmanim-chart"), options);
+    chart.render();
+}
 
         function formatZmanName(zman) {
             return zman
