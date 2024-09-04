@@ -1,115 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Advanced Zmanim Lookup</title>
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                background-color: #f0f4f8;
-                color: #333;
-            }
-            h1, h2 {
-                color: #2c3e50;
-                text-align: center;
-            }
-            form, #results, #chart-container {
-                background-color: #ffffff;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-            }
-            .form-group {
-                margin-bottom: 15px;
-            }
-            label {
-                display: block;
-                margin-bottom: 5px;
-                font-weight: bold;
-            }
-            input, button, select {
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                box-sizing: border-box;
-            }
-            button {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                padding: 10px;
-                cursor: pointer;
-                transition: background-color 0.3s;
-            }
-            button:hover {
-                background-color: #2980b9;
-            }
-            .zman-item {
-                margin-bottom: 10px;
-                padding: 10px;
-                background-color: #f8f9fa;
-                border-radius: 4px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .zman-name {
-                font-weight: bold;
-                color: #2c3e50;
-            }
-            .zman-time {
-                color: #34495e;
-            }
-            #zmanim-select {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 10px;
-                margin-bottom: 15px;
-            }
-            .zman-checkbox {
-                display: flex;
-                align-items: center;
-            }
-            .zman-checkbox input {
-                margin-right: 5px;
-                width: auto;
-            }
-            #cities-container {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 15px;
-            }
-            .city-input {
-                flex: 1;
-            }
-            .select-buttons {
-                display: flex;
-                gap: 10px;
-                margin-bottom: 15px;
-            }
-            .select-buttons button {
-                flex: 1;
-            }
-            #chart-container {
-                height: 400px;
-            }
-        </style>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Zmanim Lookup</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        form, #results, #chart-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .zman-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .zman-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .zman-time {
+            color: #34495e;
+        }
+        #zmanim-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .zman-checkbox {
+            display: flex;
+            align-items: center;
+        }
+        .zman-checkbox input {
+            margin-right: 5px;
+            width: auto;
+        }
+        #cities-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .city-input {
+            flex: 1;
+        }
+        .select-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .select-buttons button {
+            flex: 1;
+        }
+        #chart-container {
+            height: 400px;
+        }
+    </style>
+</head>
 <body>
     <h1>Advanced Zmanim Lookup</h1>
     <form id="zmanim-form">
+        <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
         <div id="cities-container">
             <div class="city-input">
                 <input type="text" placeholder="Enter city name" required>
                 <button type="button" class="remove-city" style="display:none;">Remove</button>
             </div>
+
         </div>
         <button type="button" id="add-city">Add City</button>
         <div class="form-group">
@@ -136,61 +140,125 @@
     </div>
 
     <script>
+
         let chart; // Global variable to hold the chart instance
         const zmanim = [
-    "chatzotNight", "alotHaShachar", "misheyakir", "misheyakirMachmir", "dawn", "sunrise", 
-    "sofZmanShmaMGA19Point8", "sofZmanShmaMGA16Point1", "sofZmanShmaMGA", "sofZmanShma", 
-    "sofZmanTfillaMGA19Point8", "sofZmanTfillaMGA16Point1", "sofZmanTfillaMGA", "sofZmanTfilla",
-    "chatzot", "minchaGedola", "minchaGedolaMGA", "minchaKetana", "minchaKetanaMGA", 
-    "plagHaMincha", "sunset", "beinHaShmashos", "dusk", "tzeit7083deg", "tzeit85deg", 
-    "tzeit42min", "tzeit50min", "tzeit72min"
-];
+            "chatzotNight", "alotHaShachar", "misheyakir", "misheyakirMachmir", "dawn", "sunrise", 
+            "sofZmanShmaMGA19Point8", "sofZmanShmaMGA16Point1", "sofZmanShmaMGA", "sofZmanShma", 
+            "sofZmanTfillaMGA19Point8", "sofZmanTfillaMGA16Point1", "sofZmanTfillaMGA", "sofZmanTfilla",
+            "chatzot", "minchaGedola", "minchaGedolaMGA", "minchaKetana", "minchaKetanaMGA", 
+            "plagHaMincha", "sunset", "beinHaShmashos", "dusk", "tzeit7083deg", "tzeit85deg", 
+            "tzeit42min", "tzeit50min", "tzeit72min"
+        ];
 
-const zmanimLabels = {
-    "chatzotNight": "Chatzot Night",
-    "alotHaShachar": "Alot HaShachar",
-    "misheyakir": "Misheyakir",
-    "misheyakirMachmir": "Misheyakir Machmir",
-    "dawn": "Dawn",
-    "sunrise": "Sunrise",
-    "sofZmanShmaMGA19Point8": "Sof Zman Shma (MGA 19.8°)",
-    "sofZmanShmaMGA16Point1": "Sof Zman Shma (MGA 16.1°)",
-    "sofZmanShmaMGA": "Sof Zman Shma (MGA)",
-    "sofZmanShma": "Sof Zman Shma",
-    "sofZmanTfillaMGA19Point8": "Sof Zman Tfilla (MGA 19.8°)",
-    "sofZmanTfillaMGA16Point1": "Sof Zman Tfilla (MGA 16.1°)",
-    "sofZmanTfillaMGA": "Sof Zman Tfilla (MGA)",
-    "sofZmanTfilla": "Sof Zman Tfilla",
-    "chatzot": "Chatzot",
-    "minchaGedola": "Mincha Gedola",
-    "minchaGedolaMGA": "Mincha Gedola (MGA)",
-    "minchaKetana": "Mincha Ketana",
-    "minchaKetanaMGA": "Mincha Ketana (MGA)",
-    "plagHaMincha": "Plag HaMincha",
-    "sunset": "Sunset",
-    "beinHaShmashos": "Bein HaShmashos",
-    "dusk": "Dusk",
-    "tzeit7083deg": "Tzeit 70.83°",
-    "tzeit85deg": "Tzeit 85°",
-    "tzeit42min": "Tzeit 42 min",
-    "tzeit50min": "Tzeit 50 min",
-    "tzeit72min": "Tzeit 72 min"
-};
+        const zmanimLabels = {
+            "chatzotNight": "Chatzot Night",
+            "alotHaShachar": "Alot HaShachar",
+            "misheyakir": "Misheyakir",
+            "misheyakirMachmir": "Misheyakir Machmir",
+            "dawn": "Dawn",
+            "sunrise": "Sunrise",
+            "sofZmanShmaMGA19Point8": "Sof Zman Shma (MGA 19.8°)",
+            "sofZmanShmaMGA16Point1": "Sof Zman Shma (MGA 16.1°)",
+            "sofZmanShmaMGA": "Sof Zman Shma (MGA)",
+            "sofZmanShma": "Sof Zman Shma",
+            "sofZmanTfillaMGA19Point8": "Sof Zman Tfilla (MGA 19.8°)",
+            "sofZmanTfillaMGA16Point1": "Sof Zman Tfilla (MGA 16.1°)",
+            "sofZmanTfillaMGA": "Sof Zman Tfilla (MGA)",
+            "sofZmanTfilla": "Sof Zman Tfilla",
+            "chatzot": "Chatzot",
+            "minchaGedola": "Mincha Gedola",
+            "minchaGedolaMGA": "Mincha Gedola (MGA)",
+            "minchaKetana": "Mincha Ketana",
+            "minchaKetanaMGA": "Mincha Ketana (MGA)",
+            "plagHaMincha": "Plag HaMincha",
+            "sunset": "Sunset",
+            "beinHaShmashos": "Bein HaShmashos",
+            "dusk": "Dusk",
+            "tzeit7083deg": "Tzeit 70.83°",
+            "tzeit85deg": "Tzeit 85°",
+            "tzeit42min": "Tzeit 42 min",
+            "tzeit50min": "Tzeit 50 min",
+            "tzeit72min": "Tzeit 72 min"
+        };
 
-function populateZmanimCheckboxes() {
-    const container = document.getElementById('zmanim-select');
-    zmanim.forEach(zman => {
-        const checkbox = document.createElement('div');
-        checkbox.className = 'zman-checkbox';
-        checkbox.innerHTML = `
-            <input type="checkbox" id="${zman}" name="zmanim" value="${zman}">
-            <label for="${zman}">${zmanimLabels[zman]}</label>
-        `;
-        container.appendChild(checkbox);
+
+        document.addEventListener("DOMContentLoaded", function() {
+    const map = L.map('map').setView([41.85003, -87.65005], 10); // Default to Chicago
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Handle map click event
+    map.on('click', async function(e) {
+        const lat = e.latlng.lat.toFixed(4);
+        const lng = e.latlng.lng.toFixed(4);
+        const cityInput = document.querySelector('#cities-container input');
+        
+        if (cityInput) {
+            cityInput.value = `${lat}, ${lng}`;
+
+            // Automatically fetch Zmanim data after updating the input
+            await updateZmanimData(lat, lng);
+        }
     });
+
+    // Function to fetch and display Zmanim based on lat/long
+    // Remove this block of code
+async function updateZmanimData(lat, lng) {
+    try {
+        const zmanimData = await fetchZmanimForLocation(lat, lng);
+        const locationLabel = `Location: ${lat}, ${lng}`;
+        
+        displayResults([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end);
+        createChart([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end, selectedZmanim);
+    } catch (error) {
+        console.error("Error fetching Zmanim data:", error);
+    }
+}
+});
+
+// Fetch Zmanim data for a specific latitude and longitude
+async function fetchZmanimForLocation(lat, lng) {
+    const params = new URLSearchParams({
+        cfg: 'json',
+        latitude: lat,
+        longitude: lng,
+        start: document.getElementById('start-date').value,
+        end: document.getElementById('end-date').value || document.getElementById('start-date').value,
+        b: '18',
+        M: 'on',
+        m: '50'
+    });
+
+    const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error('Failed to fetch Zmanim data');
+    }
+    const data = await response.json();
+
+    console.log('Zmanim Data for Clicked Location:', data);
+    return data;
 }
 
-populateZmanimCheckboxes();
+        function populateZmanimCheckboxes() {
+            const container = document.getElementById('zmanim-select');
+            zmanim.forEach(zman => {
+                const checkbox = document.createElement('div');
+                checkbox.className = 'zman-checkbox';
+                checkbox.innerHTML = `
+                    <input type="checkbox" id="${zman}" name="zmanim" value="${zman}">
+                    <label for="${zman}">${zmanimLabels[zman]}</label>
+                `;
+                container.appendChild(checkbox);
+            });
+        }
+
+        populateZmanimCheckboxes();
 
         document.getElementById('select-all').addEventListener('click', () => {
             document.querySelectorAll('input[name="zmanim"]').forEach(cb => cb.checked = true);
@@ -228,28 +296,45 @@ populateZmanimCheckboxes();
     try {
         const zmanimData = await Promise.all(cities.map(city => fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim)));
 
-        // No need for special handling; we'll treat both single and multiple dates the same way.
-        displayResults(zmanimData, cities, startDate, endDate);
+        displayResults(zmanimData, cities, startDate, endDate, selectedZmanim);
         createChart(zmanimData, cities, startDate, endDate, selectedZmanim);
     } catch (error) {
         resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
     }
 });
 
-async function fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim) {
-    const params = new URLSearchParams({
-        cfg: 'json',
-        city: city,
-        start: startDate,
-        end: endDate,
-        b: '18',
-        M: 'on',
-        m: '50'
-    });
+async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selectedZmanim) {
+    let params;
+
+    if (typeof cityOrLatLng === 'string' && cityOrLatLng.includes(',')) {
+        // Treat as lat/long if a comma is present
+        const [latitude, longitude] = cityOrLatLng.split(',').map(coord => coord.trim());
+        params = new URLSearchParams({
+            cfg: 'json',
+            latitude: latitude,
+            longitude: longitude,
+            start: startDate,
+            end: endDate,
+            b: '18',
+            M: 'on',
+            m: '50'
+        });
+    } else {
+        // Treat as city name
+        params = new URLSearchParams({
+            cfg: 'json',
+            city: cityOrLatLng,
+            start: startDate,
+            end: endDate,
+            b: '18',
+            M: 'on',
+            m: '50'
+        });
+    }
 
     const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
     const data = await response.json();
-    
+
     // Debugging: Log the raw data returned from the API
     console.log('Raw Zmanim Data:', data);
 
@@ -267,24 +352,46 @@ async function fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim)
     return data;
 }
 
-function displayResults(zmanimData, cities, startDate, endDate) {
+        function displayResults(zmanimData, cities, startDate, endDate) {
     const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
     const resultsDiv = document.getElementById('results');
     let html = `<h2>Zmanim Comparison (${startDate} to ${endDate})</h2>`;
 
+    // Debugging: Log the selected Zmanim
+    console.log("Selected Zmanim:", selectedZmanim);
+
     cities.forEach((city, index) => {
         const cityData = zmanimData[index];
+
+        // Debugging: Log the city and cityData
+        console.log("City:", city);
+        console.log("City Data:", cityData);
+
         html += `<h3>${city}</h3>`;
 
         if (cityData && cityData.times) {
             const times = cityData.times;
+
+            // Debugging: Log the times object
+            console.log("Times:", times);
+
             let cityHtml = '<ul>';
 
             selectedZmanim.forEach(zman => {
+                // Debugging: Log each zman key
+                console.log("Processing Zman:", zman);
+
                 if (times[zman]) {
                     Object.entries(times[zman]).forEach(([date, time]) => {
+                        // Debugging: Log the date and time being processed
+                        console.log(`Date: ${date}, Time: ${time}`);
+
                         if (time) {
                             const zmanTime = new Date(time);
+
+                            // Debugging: Log the parsed zmanTime
+                            console.log("Zman Time:", zmanTime);
+
                             if (!isNaN(zmanTime)) {
                                 const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime}</li>`;
@@ -307,152 +414,155 @@ function displayResults(zmanimData, cities, startDate, endDate) {
         }
     });
 
+    // Debugging: Log the final HTML before setting it
+    console.log("Final HTML:", html);
+
     resultsDiv.innerHTML = html;
 }
 
-function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
-    if (chart) {
-        chart.destroy();
-    }
+        function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
+            if (chart) {
+                chart.destroy();
+            }
 
-    const series = [];
-    let minTime = Infinity;
-    let maxTime = -Infinity;
+            const series = [];
+            let minTime = Infinity;
+            let maxTime = -Infinity;
 
-    selectedZmanim.forEach(zman => {
-        cities.forEach((city, cityIndex) => {
-            const data = [];
-            const cityData = zmanimData[cityIndex];
+            selectedZmanim.forEach(zman => {
+                cities.forEach((city, cityIndex) => {
+                    const data = [];
+                    const cityData = zmanimData[cityIndex];
 
-            if (cityData.times[zman]) {
-                Object.entries(cityData.times[zman]).forEach(([date, time]) => {
-                    if (time) {
-                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date only
-                        const zmanTime = new Date(time);
+                    if (cityData.times[zman]) {
+                        Object.entries(cityData.times[zman]).forEach(([date, time]) => {
+                            if (time) {
+                                const parsedDate = new Date(date + 'T00:00:00'); // Parse the date only
+                                const zmanTime = new Date(time);
 
-                        if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
-                            const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
-                            data.push([parsedDate.getTime(), timeInHours]);
+                                if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
+                                    const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
+                                    data.push([parsedDate.getTime(), timeInHours]);
 
-                            // Update min and max times for y-axis range
-                            if (timeInHours < minTime) minTime = timeInHours;
-                            if (timeInHours > maxTime) maxTime = timeInHours;
-                        } else {
-                            console.warn(`Invalid time for ${zman} on ${date}`);
+                                    // Update min and max times for y-axis range
+                                    if (timeInHours < minTime) minTime = timeInHours;
+                                    if (timeInHours > maxTime) maxTime = timeInHours;
+                                } else {
+                                    console.warn(`Invalid time for ${zman} on ${date}`);
+                                }
+                            }
+                        });
+                    }
+
+                    if (data.length > 0) {
+                        console.log(`Series Data for ${formatZmanName(zman)} - ${city}:`, data);
+
+                        series.push({
+                            name: `${formatZmanName(zman)} - ${city}`,
+                            data: data.sort((a, b) => a[0] - b[0]),
+                            type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
+                            markers: {
+                                size: 8, // Increase marker size for better visibility
+                            },
+                            stroke: {
+                                width: startDate === endDate ? 0 : 2, // No line for single date
+                            }
+                        });
+                    }
+                });
+            });
+
+            console.log('Final Chart Series Data:', series);
+
+            // Apply some padding to the min and max time for better visualization
+            const padding = 0.5; // 30 minutes of padding on both ends
+            minTime = Math.max(minTime - padding, 0); // Ensure minTime doesn't go below 0
+            maxTime = Math.min(maxTime + padding, 24); // Ensure maxTime doesn't go above 24
+
+            const options = {
+                chart: {
+                    type: 'line',
+                    height: 400,
+                    toolbar: {
+                        show: true
+                    }
+                },
+                series: series,
+                xaxis: {
+                    type: 'datetime',
+                    title: {
+                        text: 'Date'
+                    },
+                    labels: {
+                        format: 'yyyy-MM-dd'
+                    },
+                    tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
+                },
+                yaxis: {
+                    title: {
+                        text: 'Time'
+                    },
+                    min: minTime,
+                    max: maxTime,
+                    labels: {
+                        formatter: function(value) {
+                            const hours = Math.floor(value);
+                            const minutes = Math.round((value - hours) * 60);
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
+                            return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
+                        }
+                    },
+                    tickAmount: 12 // Adjust this for better granularity based on the range
+                },
+                stroke: {
+                    curve: 'smooth'
+                },
+                markers: {
+                    size: 6, // Adjust marker size for better distinction
+                    colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
+                },
+                tooltip: {
+                    x: {
+                        format: 'yyyy-MM-dd'
+                    },
+                    y: {
+                        formatter: function(value) {
+                            const hours = Math.floor(value);
+                            const minutes = Math.round((value - hours) * 60);
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
+                            return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
                         }
                     }
-                });
-            }
-
-            if (data.length > 0) {
-                console.log(`Series Data for ${formatZmanName(zman)} - ${city}:`, data);
-
-                series.push({
-                    name: `${formatZmanName(zman)} - ${city}`,
-                    data: data.sort((a, b) => a[0] - b[0]),
-                    type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
-                    markers: {
-                        size: 8, // Increase marker size for better visibility
+                },
+                grid: {
+                    show: true, // Enable grid to help differentiate times
+                    xaxis: {
+                        lines: {
+                            show: true
+                        }
                     },
-                    stroke: {
-                        width: startDate === endDate ? 0 : 2, // No line for single date
+                    yaxis: {
+                        lines: {
+                            show: true
+                        }
                     }
-                });
-            }
-        });
-    });
+                }
+            };
 
-    console.log('Final Chart Series Data:', series);
-
-    // Apply some padding to the min and max time for better visualization
-    const padding = 0.5; // 30 minutes of padding on both ends
-    minTime = Math.max(minTime - padding, 0); // Ensure minTime doesn't go below 0
-    maxTime = Math.min(maxTime + padding, 24); // Ensure maxTime doesn't go above 24
-
-    const options = {
-        chart: {
-            type: 'line',
-            height: 400,
-            toolbar: {
-                show: true
-            }
-        },
-        series: series,
-        xaxis: {
-            type: 'datetime',
-            title: {
-                text: 'Date'
-            },
-            labels: {
-                format: 'yyyy-MM-dd'
-            },
-            tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
-        },
-        yaxis: {
-            title: {
-                text: 'Time'
-            },
-            min: minTime,
-            max: maxTime,
-            labels: {
-                formatter: function(value) {
-                    const hours = Math.floor(value);
-                    const minutes = Math.round((value - hours) * 60);
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
-                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
-                }
-            },
-            tickAmount: 12 // Adjust this for better granularity based on the range
-        },
-        stroke: {
-            curve: 'smooth'
-        },
-        markers: {
-            size: 6, // Adjust marker size for better distinction
-            colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
-        },
-        tooltip: {
-            x: {
-                format: 'yyyy-MM-dd'
-            },
-            y: {
-                formatter: function(value) {
-                    const hours = Math.floor(value);
-                    const minutes = Math.round((value - hours) * 60);
-                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                    const formattedHours = hours % 12 || 12; // Convert 0:00 hours to 12:00
-                    return `${formattedHours}:${minutes < 10 ? '0' : ''}${minutes} ${ampm}`;
-                }
-            }
-        },
-        grid: {
-            show: true, // Enable grid to help differentiate times
-            xaxis: {
-                lines: {
-                    show: true
-                }
-            },
-            yaxis: {
-                lines: {
-                    show: true
-                }
-            }
+            chart = new ApexCharts(document.querySelector("#zmanim-chart"), options);
+            chart.render();
         }
-    };
 
-    chart = new ApexCharts(document.querySelector("#zmanim-chart"), options);
-    chart.render();
-}
-
-function formatZmanName(zman) {
-    return zman
-        .replace(/([A-Z])/g, ' $1')
-        .split(/(?=[A-Z])/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-        .trim();
-}
+        function formatZmanName(zman) {
+            return zman
+                .replace(/([A-Z])/g, ' $1')
+                .split(/(?=[A-Z])/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+                .trim();
+        }
 
         function getRandomColor() {
             const letters = '0123456789ABCDEF';
