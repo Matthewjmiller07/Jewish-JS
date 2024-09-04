@@ -191,76 +191,87 @@
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    map.on('click', async function(e) {
+    let reverseGeocodedCity = ""; // Variable to store the reverse-geocoded city name
+
+// Handle map click event
+map.on('click', async function(e) {
     const lat = e.latlng.lat.toFixed(4);
     const lng = e.latlng.lng.toFixed(4);
     const cityInput = document.querySelector('#cities-container input');
 
-    console.log(`Map clicked at latitude: ${lat}, longitude: ${lng}`);
-
     if (cityInput) {
-        // Reverse geocode to get the city name
-        const cityName = await getCityFromLatLong(lat, lng); 
-        cityInput.value = cityName; // Set the city input to the retrieved city name
-        console.log(`City input updated with city name: ${cityInput.value}`);
+        cityInput.value = `${lat}, ${lng}`;
 
-        // Fetch Zmanim data using the city name
-        await updateZmanimData(lat, lng, cityName); 
+        // Automatically fetch Zmanim data after updating the input
+        await updateZmanimData(lat, lng);
     }
 });
 });
 
-async function updateZmanimData(lat, lng, cityName) {
+async function updateZmanimData(lat, lng) {
     try {
+        // Fetch city name using reverse geocoding
+        const cityName = await getCityFromLatLong(lat, lng);
+
+        // Log the coordinates and the reverse-geocoded city name
         console.log(`Fetching Zmanim data for lat: ${lat}, lng: ${lng}, city: ${cityName}`);
-        const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
-        const zmanimData = await fetchZmanimForLocation(lat, lng, cityName); // Pass cityName to fetchZmanimForLocation
+
+        // Fetch Zmanim data
+        const zmanimData = await fetchZmanimForLocation(lat, lng);
+
+        // Construct the location label with lat/long and city name
         const locationLabel = `Location: ${lat}, ${lng} (${cityName})`;
 
-        console.log(`Fetched Zmanim data:`, zmanimData);
-
+        // Update the display with Zmanim data and chart
         displayResults([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end);
+        const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
         createChart([zmanimData], [locationLabel], zmanimData.date.start, zmanimData.date.end, selectedZmanim);
     } catch (error) {
         console.error("Error fetching Zmanim data:", error);
     }
 }
 
-async function fetchZmanimForLocation(lat, lng, cityName) {
-    console.log(`Calling Hebcal API for lat: ${lat}, lng: ${lng}, city: ${cityName}`);
+async function fetchZmanimForLocation(lat, lng) {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value || startDate; // Handle single date
 
     const params = new URLSearchParams({
         cfg: 'json',
-        latitude: lat,
+        latitude: lat,  // Use lat/long
         longitude: lng,
-        start: document.getElementById('start-date').value,
-        end: document.getElementById('end-date').value || document.getElementById('start-date').value,
+        start: startDate,
+        end: endDate,
         b: '18',
         M: 'on',
         m: '50'
     });
 
-    // Only add the city parameter if cityName is truthy (not null, undefined, or empty string)
-    if (cityName) {
-        params.append('city', cityName); 
-    }
+    const apiUrl = `https://www.hebcal.com/zmanim?${params}`;
+    console.log(`Calling Hebcal API with lat/long: ${apiUrl}`);
 
-    const response = await fetch(`https://www.hebcal.com/zmanim?${params}`);
+    const response = await fetch(apiUrl);
     if (!response.ok) {
         const errorData = await response.json();
         console.error('API Error:', errorData);
         throw new Error('Failed to fetch Zmanim data');
     }
+
     const data = await response.json();
-
     console.log('Received Zmanim data:', data);
-
-    return data; 
+    
+    if (startDate === endDate) {
+        // Handle single date format by assigning all times to the single date
+        data.times = Object.fromEntries(
+            Object.entries(data.times).map(([zman, time]) => [zman, { [startDate]: time }])
+        );
+    }
+    
+    return data;
 }
 
 async function getCityFromLatLong(lat, lng) {
     console.log(`Reverse geocoding for lat: ${lat}, lng: ${lng}`);
-    
+
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
     const data = await response.json();
 
@@ -320,28 +331,63 @@ document.getElementById('zmanim-form').addEventListener('submit', async (e) => {
     e.preventDefault(); // Prevent the form from resetting
     console.log('Form submitted, fetching Zmanim.');
 
-    const cities = Array.from(document.querySelectorAll('#cities-container input')).map(input => input.value);
+    // Retrieve city inputs (which may include lat/long)
+    const cityInputs = Array.from(document.querySelectorAll('#cities-container input')).map(input => input.value);
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value || startDate; // Use startDate if endDate is not provided
     const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
     const resultsDiv = document.getElementById('results');
 
-    console.log(`Fetching Zmanim for cities: ${cities}, from ${startDate} to ${endDate}`);
+    console.log(`Fetching Zmanim for cities: ${cityInputs}, from ${startDate} to ${endDate}`);
     
     resultsDiv.innerHTML = '<p>Loading...</p>';
 
     try {
-        const zmanimData = await Promise.all(cities.map(city => fetchZmanimForDateRange(city, startDate, endDate, selectedZmanim)));
-        
-        console.log('Zmanim data fetched:', zmanimData);
-        
-        displayResults(zmanimData, cities, startDate, endDate, selectedZmanim);
-        createChart(zmanimData, cities, startDate, endDate, selectedZmanim);
+        // Fetch Zmanim data for each city/lat-long combination
+        const zmanimData = await Promise.all(cityInputs.map(async (cityOrLatLong) => {
+            // Check if the input is a lat/long pair or a city name
+            if (cityOrLatLong.includes(',')) {
+                const [lat, lng] = cityOrLatLong.split(',').map(coord => coord.trim());
+                const cityName = await getCityFromLatLong(lat, lng); // Reverse-geocode the city name
+                return {
+                    zmanimData: await fetchZmanimForLocation(lat, lng), // Fetch Zmanim using lat/long
+                    locationLabel: `${lat}, ${lng} (${cityName})` // Display both lat/long and city
+                };
+            } else {
+                // Handle regular city name (for cities directly entered)
+                const latLongData = await fetchLatLongForCity(cityOrLatLong); // Assume you have a function to get lat/long from city
+                return {
+                    zmanimData: await fetchZmanimForLocation(latLongData.lat, latLongData.lng),
+                    locationLabel: `${latLongData.lat}, ${latLongData.lng} (${cityOrLatLong})` // Combine lat/long and city
+                };
+            }
+        }));
+
+        // Extract Zmanim data and location labels for display
+        const zmanimArray = zmanimData.map(data => data.zmanimData);
+        const locationLabels = zmanimData.map(data => data.locationLabel);
+
+        console.log('Zmanim data fetched:', zmanimArray);
+
+        // Display results and create chart
+        displayResults(zmanimArray, locationLabels, startDate, endDate, selectedZmanim);
+        createChart(zmanimArray, locationLabels, startDate, endDate, selectedZmanim);
     } catch (error) {
         resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
         console.error('Error fetching Zmanim:', error);
     }
 });
+
+async function fetchLatLongForCity(city) {
+    // You can implement this function using an API or a pre-defined map to get lat/long from a city name
+    // For example:
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?city=${city}&format=json&limit=1`);
+    const data = await response.json();
+    if (data && data.length > 0) {
+        return { lat: data[0].lat, lng: data[0].lon };
+    }
+    return { lat: 0, lng: 0 }; // Default if no result found
+}
 
 async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selectedZmanim) {
     let params;
@@ -392,41 +438,29 @@ async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selecte
     return data;
 }
 
-function displayResults(zmanimData, cities, startDate, endDate) {
-    const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
+function displayResults(zmanimData, cities, startDate, endDate, selectedZmanim) {
     const resultsDiv = document.getElementById('results');
     let html = `<h2>Zmanim Comparison (${startDate || 'N/A'} to ${endDate || 'N/A'})</h2>`;
 
-    cities.forEach((city, index) => {
+    cities.forEach((locationLabel, index) => {
         const cityData = zmanimData[index];
-        const cityName = cityData.location?.title || city; // Extract city name from the response
-
-        html += `<h3>${cityName} (${city})</h3>`;  // Display city name and lat/long
+        html += `<h3>${locationLabel}</h3>`;  // Display lat, long, and city name
 
         if (cityData && cityData.times) {
             const times = cityData.times;
             let cityHtml = '<ul>';
-
             selectedZmanim.forEach(zman => {
                 if (times[zman]) {
                     Object.entries(times[zman]).forEach(([date, time]) => {
                         if (time) {
-                            const zmanTime = new Date(time);
-                            if (!isNaN(zmanTime.getTime())) { // Ensure the date is valid
-                                const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime}</li>`;
-                            } else {
-                                cityHtml += `<li>${formatZmanName(zman)} (${date}): Invalid Date</li>`;
-                            }
-                        } else {
-                            cityHtml += `<li>${formatZmanName(zman)} (${date}): Invalid Time</li>`;
+                            const formattedTime = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime}</li>`;
                         }
                     });
                 } else {
                     cityHtml += `<li>${formatZmanName(zman)}: No data available</li>`;
                 }
             });
-
             cityHtml += '</ul>';
             html += cityHtml;
         } else {
@@ -439,7 +473,7 @@ function displayResults(zmanimData, cities, startDate, endDate) {
 
 function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
     if (chart) {
-        chart.destroy();
+        chart.destroy();  // Destroy the previous chart instance
     }
 
     const series = [];
@@ -447,15 +481,14 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
     let maxTime = -Infinity;
 
     selectedZmanim.forEach(zman => {
-        cities.forEach((city, cityIndex) => {
+        cities.forEach((locationLabel, cityIndex) => {
             const data = [];
             const cityData = zmanimData[cityIndex];
-            const cityName = cityData.location?.title || city; // Extract city name from the response
 
             if (cityData.times[zman]) {
                 Object.entries(cityData.times[zman]).forEach(([date, time]) => {
                     if (time) {
-                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date only
+                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date
                         const zmanTime = new Date(time);
 
                         if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
@@ -471,14 +504,12 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
             }
 
             if (data.length > 0) {
-                console.log(`Series Data for ${formatZmanName(zman)} - ${cityName}:`, data);
-
                 series.push({
-                    name: `${formatZmanName(zman)} - ${cityName}`,
+                    name: `${formatZmanName(zman)} - ${locationLabel}`,  // Correctly label the chart with the city
                     data: data.sort((a, b) => a[0] - b[0]),
                     type: startDate === endDate ? 'scatter' : 'line', // Use scatter for single date
                     markers: {
-                        size: 8, // Increase marker size for better visibility
+                        size: 8,
                     },
                     stroke: {
                         width: startDate === endDate ? 0 : 2, // No line for single date
@@ -488,9 +519,6 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
         });
     });
 
-    console.log('Final Chart Series Data:', series);
-
-    // Apply padding to the min and max time for better visualization
     const padding = 0.5;
     minTime = Math.max(minTime - padding, 0);
     maxTime = Math.min(maxTime + padding, 24);
@@ -512,7 +540,7 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
             labels: {
                 format: 'yyyy-MM-dd'
             },
-            tickAmount: series[0]?.data.length > 1 ? undefined : 1 // Adjusting tick amount for single date
+            tickAmount: series[0]?.data.length > 1 ? undefined : 1
         },
         yaxis: {
             title: {
@@ -536,7 +564,6 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
         },
         markers: {
             size: 6,
-            colors: ['#FFA500', '#FF0000', '#00FF00', '#0000FF', '#800080'], // Use distinct colors
         },
         tooltip: {
             x: {
