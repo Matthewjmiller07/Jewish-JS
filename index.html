@@ -438,8 +438,20 @@ async function fetchZmanimForDateRange(cityOrLatLng, startDate, endDate, selecte
     return data;
 }
 
-function displayResults(zmanimData, cities, startDate, endDate, selectedZmanim) {
+function displayResults(zmanimData, cities, startDate, endDate) {
+    const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
     const resultsDiv = document.getElementById('results');
+    
+    if (!zmanimData || zmanimData.length === 0) {
+        resultsDiv.innerHTML = '<p>No Zmanim data available.</p>';
+        return;
+    }
+
+    if (!selectedZmanim || selectedZmanim.length === 0) {
+        resultsDiv.innerHTML = '<p>No Zmanim selected.</p>';
+        return;
+    }
+
     let html = `<h2>Zmanim Comparison (${startDate || 'N/A'} to ${endDate || 'N/A'})</h2>`;
 
     cities.forEach((locationLabel, index) => {
@@ -448,13 +460,19 @@ function displayResults(zmanimData, cities, startDate, endDate, selectedZmanim) 
 
         if (cityData && cityData.times) {
             const times = cityData.times;
+            const timeZone = cityData.location?.tzid || 'UTC'; // Default to UTC if time zone is not provided
             let cityHtml = '<ul>';
             selectedZmanim.forEach(zman => {
                 if (times[zman]) {
                     Object.entries(times[zman]).forEach(([date, time]) => {
                         if (time) {
-                            const formattedTime = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime}</li>`;
+                            const zmanTime = new Date(time); // Create date object from time
+                            const formattedTime = zmanTime.toLocaleString('en-US', { 
+                                timeZone: timeZone, // Convert to local time zone
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
+                            cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime} (${timeZone})</li>`;
                         }
                     });
                 } else {
@@ -484,21 +502,26 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
         cities.forEach((locationLabel, cityIndex) => {
             const data = [];
             const cityData = zmanimData[cityIndex];
+            const timeZone = cityData.location?.tzid || 'UTC';  // Use the time zone provided or default to UTC
 
             if (cityData.times[zman]) {
                 Object.entries(cityData.times[zman]).forEach(([date, time]) => {
                     if (time) {
-                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date
-                        const zmanTime = new Date(time);
+                        const parsedDate = new Date(date + 'T00:00:00'); // Parse the date part
+                        const zmanTime = new Date(time); // Zman time as Date object
 
-                        if (!isNaN(zmanTime.getTime())) { // Ensure it's a valid date
-                            const timeInHours = zmanTime.getHours() + zmanTime.getMinutes() / 60;
-                            data.push([parsedDate.getTime(), timeInHours]);
+                        // Convert time to the appropriate time zone
+                        const formattedTime = new Date(zmanTime.toLocaleString('en-US', {
+                            timeZone: timeZone
+                        }));
 
-                            // Update min and max times for y-axis range
-                            if (timeInHours < minTime) minTime = timeInHours;
-                            if (timeInHours > maxTime) maxTime = timeInHours;
-                        }
+                        // Calculate the time in hours
+                        const timeInHours = formattedTime.getHours() + formattedTime.getMinutes() / 60;
+                        data.push([parsedDate.getTime(), timeInHours]);
+
+                        // Update min and max times for y-axis range
+                        if (timeInHours < minTime) minTime = timeInHours;
+                        if (timeInHours > maxTime) maxTime = timeInHours;
                     }
                 });
             }
