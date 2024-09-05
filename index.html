@@ -128,11 +128,15 @@
     color: #34495e;
 }
 
+/* Distinct style for the current time marker */
 .current-time-marker {
     font-weight: bold;
     font-size: 1.2em;
-    color: #2980b9;
-    margin-bottom: 15px;
+    color: #ffffff;
+    background-color: #2980b9;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
     </style>
 </head>
@@ -688,58 +692,60 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
 
     // Get current time
     const currentTime = new Date();
-    const currentTimeFormatted = currentTime.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
 
-    // Add current time marker
-    const currentTimeMarker = document.createElement('div');
-    currentTimeMarker.className = 'current-time-marker';
-    currentTimeMarker.textContent = `Current Time: ${currentTimeFormatted}`;
-    resultsContainer.appendChild(currentTimeMarker);
+    // Array to hold all Zmanim and the current time
+    let zmanimList = [];
 
     // Display Zmanim and highlight based on current time
     if (zmanimData && zmanimData.times) {
-        console.log('Raw Zmanim Data:', zmanimData.times); // Log the raw zmanim data for debugging
-
         Object.entries(zmanimData.times).forEach(([zman, zmanObject]) => {
             if (zmanObject) {
-                const zmanItem = document.createElement('div');
-                zmanItem.className = 'zmanim-item';
-
-                const zmanName = document.createElement('div');
-                zmanName.className = 'zmanim-name';
-                zmanName.textContent = formatZmanName(zman);
-
-                // Extract the time from the object
                 const zmanTimeStr = Object.values(zmanObject)[0]; // Get the first date/time pair
-                let zmanTime = new Date(zmanTimeStr); // Convert to Date object
+                const zmanTime = new Date(zmanTimeStr); // Convert to Date object
 
-                if (isNaN(zmanTime.getTime())) {
+                if (!isNaN(zmanTime.getTime())) {
+                    zmanimList.push({ name: formatZmanName(zman), time: zmanTime });
+                } else {
                     console.warn(`Invalid Date for zman ${zman}: ${zmanTimeStr}`);
                 }
-
-                const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                const zmanTimeDiv = document.createElement('div');
-                zmanTimeDiv.className = 'zmanim-time';
-                zmanTimeDiv.textContent = formattedTime;
-
-                // Grey out past times
-                if (currentTime > zmanTime) {
-                    zmanItem.style.color = 'grey';
-                }
-
-                zmanItem.appendChild(zmanName);
-                zmanItem.appendChild(zmanTimeDiv);
-
-                resultsContainer.appendChild(zmanItem);
             }
         });
-    } else {
-        resultsContainer.innerHTML = '<p>No Zmanim data available.</p>';
     }
+
+    // Add current time to the list for comparison
+    zmanimList.push({ name: 'Current Time', time: currentTime });
+
+    // Sort Zmanim list by time
+    zmanimList.sort((a, b) => a.time - b.time);
+
+    // Display sorted Zmanim including current time
+    zmanimList.forEach(({ name, time }) => {
+        const zmanItem = document.createElement('div');
+        zmanItem.className = 'zmanim-item';
+
+        const zmanName = document.createElement('div');
+        zmanName.className = 'zmanim-name';
+        zmanName.textContent = name;
+
+        const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const zmanTimeDiv = document.createElement('div');
+        zmanTimeDiv.className = 'zmanim-time';
+        zmanTimeDiv.textContent = formattedTime;
+
+        // If it's the current time, highlight it
+        if (name === 'Current Time') {
+            zmanItem.classList.add('current-time-marker');
+        } else if (currentTime > time) {
+            // Grey out past times
+            zmanItem.style.color = 'grey';
+        }
+
+        zmanItem.appendChild(zmanName);
+        zmanItem.appendChild(zmanTimeDiv);
+
+        resultsContainer.appendChild(zmanItem);
+    });
 }
 
         document.getElementById('zmanim-today-btn').addEventListener('click', async () => {
