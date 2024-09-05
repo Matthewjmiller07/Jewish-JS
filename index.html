@@ -8,197 +8,104 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
-        /* General page layout and typography */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #f0f4f8;
-    color: #333;
-}
-
-h1, h2 {
-    color: #2c3e50;
-    text-align: center;
-}
-
-form, #results, #chart-container, .zmanim-results-container {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-}
-
-/* General input and button styling */
-input, button, select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-sizing: border-box;
-}
-
-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 12px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #2980b9;
-}
-
-/* Styling for form elements */
-.form-group {
-    margin-bottom: 20px;
-}
-
-label {
-    display: block;
-    margin-bottom: 10px;
-    font-weight: bold;
-}
-
-/* Zmanim Checkboxes */
-#zmanim-select {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.zman-checkbox {
-    display: flex;
-    align-items: center;
-}
-
-.zman-checkbox input {
-    margin-right: 8px;
-    width: auto;
-}
-
-/* City Input Section */
-#cities-container {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.city-input {
-    flex: 1;
-}
-
-/* Button group styling */
-.select-buttons {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-/* Today's Zmanim Button */
-#zmanim-today-container {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
-    text-align: center;
-}
-
-#zmanim-today-location {
-    width: auto;
-    padding: 12px 30px;
-    margin-top: 20px;
-    background-color: #e74c3c;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-#zmanim-today-location:hover {
-    background-color: #c0392b;
-}
-
-/* Results Display Styling */
-.zmanim-results-container {
-    margin-top: 30px;
-    padding: 30px;
-    background-color: #fdfdfd;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
-
-.zmanim-results-title {
-    font-size: 22px;
-    margin-bottom: 20px;
-    color: #2c3e50;
-    font-weight: bold;
-}
-
-.zmanim-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    border-radius: 8px;
-    background-color: #f8f9fa;
-    margin-bottom: 10px;
-}
-
-.zmanim-item:last-child {
-    border-bottom: none;
-}
-
-.zmanim-item .zmanim-name {
-    font-weight: bold;
-    color: #3498db;
-    font-size: 18px;
-}
-
-.zmanim-item .zmanim-time {
-    color: #34495e;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.zmanim-item .zmanim-time::before {
-    content: "⏰ ";
-}
-
-/* Chart Container */
-#chart-container {
-    height: 400px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        form, #results, #chart-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .zman-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .zman-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .zman-time {
+            color: #34495e;
+        }
+        #zmanim-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .zman-checkbox {
+            display: flex;
+            align-items: center;
+        }
+        .zman-checkbox input {
+            margin-right: 5px;
+            width: auto;
+        }
+        #cities-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .city-input {
+            flex: 1;
+        }
+        .select-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .select-buttons button {
+            flex: 1;
+        }
+        #chart-container {
+            height: 400px;
+        }
     </style>
 </head>
 <body>
     <h1>Advanced Zmanim Lookup</h1>
-    <div id="zmanim-today-container">
-        <h2>Get Zmanim for Today</h2>
-        <p>Click the button below to get the Zmanim for your current location today.</p>
-        <button id="zmanim-today-location">Today's Zmanim</button>
-    </div>
-    
-    <!-- Results container for Today's Zmanim -->
-    <div id="zmanim-today-results" class="zmanim-results-container"></div>
-    
-    <!-- The rest of the Zmanim lookup form and chart area -->
     <form id="zmanim-form">
         <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
         <div id="cities-container">
@@ -206,6 +113,7 @@ label {
                 <input type="text" placeholder="Enter city name" required>
                 <button type="button" class="remove-city" style="display:none;">Remove</button>
             </div>
+
         </div>
         <button type="button" id="add-city">Add City</button>
         <div class="form-group">
@@ -226,7 +134,6 @@ label {
         </div>
         <button type="submit">Get Zmanim</button>
     </form>
-    
     <div id="results"></div>
     <div id="chart-container">
         <div id="zmanim-chart"></div>
@@ -325,13 +232,15 @@ async function updateZmanimData(lat, lng) {
 }
 
 async function fetchZmanimForLocation(lat, lng) {
-    const today = new Date().toISOString().split('T')[0]; // Get today's date
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value || startDate; // Handle single date
+
     const params = new URLSearchParams({
         cfg: 'json',
-        latitude: lat,
+        latitude: lat,  // Use lat/long
         longitude: lng,
-        start: today,
-        end: today,
+        start: startDate,
+        end: endDate,
         b: '18',
         M: 'on',
         m: '50'
@@ -350,10 +259,12 @@ async function fetchZmanimForLocation(lat, lng) {
     const data = await response.json();
     console.log('Received Zmanim data:', data);
     
-    // Properly format times if available
-    data.times = Object.fromEntries(
-        Object.entries(data.times).map(([zman, time]) => [zman, { [today]: time }])
-    );
+    if (startDate === endDate) {
+        // Handle single date format by assigning all times to the single date
+        data.times = Object.fromEntries(
+            Object.entries(data.times).map(([zman, time]) => [zman, { [startDate]: time }])
+        );
+    }
     
     return data;
 }
@@ -555,14 +466,13 @@ function displayResults(zmanimData, cities, startDate, endDate) {
                 if (times[zman]) {
                     Object.entries(times[zman]).forEach(([date, time]) => {
                         if (time) {
-                            const zmanTime = new Date(time);
-                            // Ensure time is valid
-                            if (!isNaN(zmanTime.getTime())) {
-                                const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone });
-                                cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime} (${timeZone})</li>`;
-                            } else {
-                                cityHtml += `<li>${formatZmanName(zman)} (${date}): Invalid Date</li>`;
-                            }
+                            const zmanTime = new Date(time); // Create date object from time
+                            const formattedTime = zmanTime.toLocaleString('en-US', { 
+                                timeZone: timeZone, // Convert to local time zone
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
+                            cityHtml += `<li>${formatZmanName(zman)} (${date}): ${formattedTime} (${timeZone})</li>`;
                         }
                     });
                 } else {
@@ -711,6 +621,14 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
     chart.render();
 }
 
+        function formatZmanName(zman) {
+            return zman
+                .replace(/([A-Z])/g, ' $1')
+                .split(/(?=[A-Z])/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+                .trim();
+        }
 
         function getRandomColor() {
             const letters = '0123456789ABCDEF';
@@ -720,87 +638,6 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
             }
             return color;
         }
-
-        document.getElementById('zmanim-today-location').addEventListener('click', async () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const lat = position.coords.latitude.toFixed(4);
-            const lng = position.coords.longitude.toFixed(4);
-            const today = new Date().toISOString().split('T')[0];
-
-            console.log(`Fetching Zmanim for today's date (${today}) at current location: ${lat}, ${lng}`);
-            try {
-                const zmanimData = await fetchZmanimForLocation(lat, lng, today, today);
-                const cityName = await getCityFromLatLong(lat, lng);
-                const locationLabel = `${lat}, ${lng} (${cityName})`;
-
-                // Display Zmanim in the new container
-                displayZmanimResults(zmanimData, locationLabel, today);
-
-                // Update the chart as well if needed
-                const selectedZmanim = zmanim; // Use all Zmanim
-                createChart([zmanimData], [locationLabel], today, today, selectedZmanim);
-            } catch (error) {
-                console.error("Error fetching Zmanim for current location:", error);
-            }
-        }, (error) => {
-            console.error("Error getting current location:", error);
-        });
-    } else {
-        console.warn("Geolocation is not supported by this browser.");
-    }
-});
-
-function displayZmanimResults(zmanimData, locationLabel, date) {
-    const resultsContainer = document.getElementById('zmanim-today-results');
-    resultsContainer.innerHTML = ''; // Clear previous results
-
-    // Create the title
-    const title = document.createElement('div');
-    title.className = 'zmanim-results-title';
-    title.textContent = `Zmanim for ${locationLabel} on ${date}`;
-    resultsContainer.appendChild(title);
-
-    // Create the list of Zmanim items
-    if (zmanimData && zmanimData.times) {
-        Object.entries(zmanimData.times).forEach(([zman, timeObj]) => {
-            const time = timeObj[date];
-            if (time) {
-                const zmanItem = document.createElement('div');
-                zmanItem.className = 'zmanim-item';
-
-                const zmanName = document.createElement('div');
-                zmanName.className = 'zmanim-name';
-                zmanName.textContent = formatZmanName(zman);
-
-                const zmanTime = new Date(time); // Create a date object from the time
-                const formattedTime = !isNaN(zmanTime.getTime()) 
-                    ? zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    : "Invalid Date";
-
-                const zmanTimeDiv = document.createElement('div');
-                zmanTimeDiv.className = 'zmanim-time';
-                zmanTimeDiv.textContent = formattedTime;
-
-                zmanItem.appendChild(zmanName);
-                zmanItem.appendChild(zmanTimeDiv);
-
-                resultsContainer.appendChild(zmanItem);
-            }
-        });
-    } else {
-        resultsContainer.innerHTML = '<p>No Zmanim data available.</p>';
-    }
-}
-
-function formatZmanName(zman) {
-    return zman
-        .replace(/([A-Z])/g, ' $1')
-        .split(/(?=[A-Z])/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-        .trim();
-}
     </script>
 </body>
 </html>
