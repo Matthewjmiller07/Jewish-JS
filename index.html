@@ -102,10 +102,47 @@
         #chart-container {
             height: 400px;
         }
+        /* Style for the Zmanim Results Container */
+.zmanim-results-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.zmanim-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.zmanim-name {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.zmanim-time {
+    color: #34495e;
+}
+
+.current-time-marker {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #2980b9;
+    margin-bottom: 15px;
+}
     </style>
 </head>
 <body>
     <h1>Advanced Zmanim Lookup</h1>
+    <div id="today-zmanim-section" style="margin-bottom: 30px;">
+        <h2>Today's Zmanim</h2>
+        <button id="zmanim-today-btn">Get Today's Zmanim</button>
+        <div id="today-zmanim-results" class="zmanim-results-container"></div>
+    </div>
     <form id="zmanim-form">
         <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
         <div id="cities-container">
@@ -638,6 +675,106 @@ function createChart(zmanimData, cities, startDate, endDate, selectedZmanim) {
             }
             return color;
         }
+
+        function displayTodayZmanim(zmanimData, locationLabel, date) {
+    const resultsContainer = document.getElementById('today-zmanim-results');
+    resultsContainer.innerHTML = ''; // Clear previous results
+
+    // Create title
+    const title = document.createElement('div');
+    title.className = 'zmanim-results-title';
+    title.textContent = `Zmanim for ${locationLabel} on ${date}`;
+    resultsContainer.appendChild(title);
+
+    // Get current time
+    const currentTime = new Date();
+    const currentTimeFormatted = currentTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // Add current time marker
+    const currentTimeMarker = document.createElement('div');
+    currentTimeMarker.className = 'current-time-marker';
+    currentTimeMarker.textContent = `Current Time: ${currentTimeFormatted}`;
+    resultsContainer.appendChild(currentTimeMarker);
+
+    // Display Zmanim and highlight based on current time
+    if (zmanimData && zmanimData.times) {
+        console.log('Raw Zmanim Data:', zmanimData.times); // Log the raw zmanim data for debugging
+
+        Object.entries(zmanimData.times).forEach(([zman, zmanObject]) => {
+            if (zmanObject) {
+                const zmanItem = document.createElement('div');
+                zmanItem.className = 'zmanim-item';
+
+                const zmanName = document.createElement('div');
+                zmanName.className = 'zmanim-name';
+                zmanName.textContent = formatZmanName(zman);
+
+                // Extract the time from the object
+                const zmanTimeStr = Object.values(zmanObject)[0]; // Get the first date/time pair
+                let zmanTime = new Date(zmanTimeStr); // Convert to Date object
+
+                if (isNaN(zmanTime.getTime())) {
+                    console.warn(`Invalid Date for zman ${zman}: ${zmanTimeStr}`);
+                }
+
+                const formattedTime = zmanTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const zmanTimeDiv = document.createElement('div');
+                zmanTimeDiv.className = 'zmanim-time';
+                zmanTimeDiv.textContent = formattedTime;
+
+                // Grey out past times
+                if (currentTime > zmanTime) {
+                    zmanItem.style.color = 'grey';
+                }
+
+                zmanItem.appendChild(zmanName);
+                zmanItem.appendChild(zmanTimeDiv);
+
+                resultsContainer.appendChild(zmanItem);
+            }
+        });
+    } else {
+        resultsContainer.innerHTML = '<p>No Zmanim data available.</p>';
+    }
+}
+
+        document.getElementById('zmanim-today-btn').addEventListener('click', async () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude.toFixed(4);
+            const lng = position.coords.longitude.toFixed(4);
+            const today = new Date().toISOString().split('T')[0]; // Current date in yyyy-mm-dd format
+
+            console.log(`Fetching Zmanim for today's date (${today}) at current location: ${lat}, ${lng}`);
+
+            try {
+                // Fetch Zmanim data for current location
+                const zmanimData = await fetchZmanimForLocation(lat, lng, today, today);
+
+                // Fetch reverse geocoded city name
+                const cityName = await getCityFromLatLong(lat, lng);
+                const locationLabel = `${lat}, ${lng} (${cityName})`;
+
+                // Display Zmanim in the new container
+                displayTodayZmanim(zmanimData, locationLabel, today);
+
+            } catch (error) {
+                console.error("Error fetching Zmanim for current location:", error);
+                document.getElementById('today-zmanim-results').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }, (error) => {
+            console.error("Error getting current location:", error);
+            document.getElementById('today-zmanim-results').innerHTML = `<p>Error getting location: ${error.message}</p>`;
+        });
+    } else {
+        console.warn("Geolocation is not supported by this browser.");
+        document.getElementById('today-zmanim-results').innerHTML = '<p>Geolocation not supported by your browser.</p>';
+    }
+});
     </script>
 </body>
 </html>
