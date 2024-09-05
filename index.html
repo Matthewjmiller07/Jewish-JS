@@ -372,34 +372,40 @@ document.getElementById('zmanim-form').addEventListener('submit', async (e) => {
     e.preventDefault(); // Prevent the form from resetting
     console.log('Form submitted, fetching Zmanim.');
 
-    // Retrieve city inputs (which may include lat/long)
     const cityInputs = Array.from(document.querySelectorAll('#cities-container input')).map(input => input.value);
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value || startDate; // Use startDate if endDate is not provided
     const selectedZmanim = Array.from(document.querySelectorAll('input[name="zmanim"]:checked')).map(cb => cb.value);
     const resultsDiv = document.getElementById('results');
 
-    console.log(`Fetching Zmanim for cities: ${cityInputs}, from ${startDate} to ${endDate}`);
+    console.log(`Fetching Zmanim for inputs: ${cityInputs}, from ${startDate} to ${endDate}`);
     
     resultsDiv.innerHTML = '<p>Loading...</p>';
 
     try {
-        // Fetch Zmanim data for each city/lat-long combination
-        const zmanimData = await Promise.all(cityInputs.map(async (cityOrLatLong) => {
-            // Check if the input is a lat/long pair or a city name
-            if (cityOrLatLong.includes(',')) {
-                const [lat, lng] = cityOrLatLong.split(',').map(coord => coord.trim());
-                const cityName = await getCityFromLatLong(lat, lng); // Reverse-geocode the city name
+        const zmanimData = await Promise.all(cityInputs.map(async (input) => {
+            const isZipCode = /^\d{5}$/.test(input);
+
+            if (isZipCode) {
+                // Fetch Zmanim using the ZIP code parameter
                 return {
-                    zmanimData: await fetchZmanimForLocation(lat, lng), // Fetch Zmanim using lat/long
-                    locationLabel: `${lat}, ${lng} (${cityName})` // Display both lat/long and city
+                    zmanimData: await fetchZmanimByZipCode(input),
+                    locationLabel: `ZIP Code: ${input}`
+                };
+            } else if (input.includes(',')) {
+                // Treat as lat/long pair
+                const [lat, lng] = input.split(',').map(coord => coord.trim());
+                const cityName = await getCityFromLatLong(lat, lng);
+                return {
+                    zmanimData: await fetchZmanimForLocation(lat, lng),
+                    locationLabel: `${lat}, ${lng} (${cityName})`
                 };
             } else {
-                // Handle regular city name (for cities directly entered)
-                const latLongData = await fetchLatLongForCity(cityOrLatLong); // Assume you have a function to get lat/long from city
+                // Treat as city name and fetch lat/long
+                const latLongData = await fetchLatLongForCity(input);
                 return {
                     zmanimData: await fetchZmanimForLocation(latLongData.lat, latLongData.lng),
-                    locationLabel: `${latLongData.lat}, ${latLongData.lng} (${cityOrLatLong})` // Combine lat/long and city
+                    locationLabel: `${latLongData.lat}, ${latLongData.lng} (${input})`
                 };
             }
         }));
@@ -418,6 +424,45 @@ document.getElementById('zmanim-form').addEventListener('submit', async (e) => {
         console.error('Error fetching Zmanim:', error);
     }
 });
+
+
+// Fetch Zmanim using ZIP code
+async function fetchZmanimByZipCode(zipCode) {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value || startDate; // Handle single date
+
+    const params = new URLSearchParams({
+        cfg: 'json',
+        zip: zipCode,  // Use ZIP code
+        start: startDate,
+        end: endDate,
+        b: '18',
+        M: 'on',
+        m: '50'
+    });
+
+    const apiUrl = `https://www.hebcal.com/zmanim?${params}`;
+    console.log(`Calling Hebcal API with ZIP code: ${apiUrl}`);
+
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error('Failed to fetch Zmanim data');
+    }
+
+    const data = await response.json();
+    console.log('Received Zmanim data:', data);
+
+    if (startDate === endDate) {
+        // Handle single date format by assigning all times to the single date
+        data.times = Object.fromEntries(
+            Object.entries(data.times).map(([zman, time]) => [zman, { [startDate]: time }])
+        );
+    }
+
+    return data;
+}
 
 async function fetchLatLongForCity(city) {
     // You can implement this function using an API or a pre-defined map to get lat/long from a city name
