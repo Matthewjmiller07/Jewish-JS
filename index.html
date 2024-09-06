@@ -165,6 +165,14 @@ table th {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
 }
+
+#leaderboard-map {
+    height: 400px;
+    width: 100%;
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
     </style>
 </head>
 <body>
@@ -225,6 +233,7 @@ table th {
             </tbody>
         </table>
     </div>
+    <div id="leaderboard-map"></div>
 </div>
 
     <script>
@@ -939,6 +948,13 @@ async function generateLeaderboard() {
     const leaderboardContainer = document.getElementById('leaderboard-results');
     leaderboardContainer.innerHTML = ''; // Clear previous results
 
+    // Clear existing markers from the map
+    leaderboardMap.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker) {
+            leaderboardMap.removeLayer(layer);
+        }
+    });
+
     for (const zman of selectedZmanim) {
         const leaderboardData = [];
 
@@ -957,7 +973,9 @@ async function generateLeaderboard() {
                     state: capital.state,
                     time: zmanTime,
                     zip: capital.zip,
-                    timezone: zmanimData.location?.tzid || 'UTC'
+                    timezone: zmanimData.location?.tzid || 'UTC',
+                    lat: capital.lat,
+                    lng: capital.lng
                 });
             }
         }
@@ -1004,12 +1022,69 @@ async function generateLeaderboard() {
         });
 
         leaderboardContainer.appendChild(table); // Append each new table to the leaderboard container
+
+        // Add markers to the map
+        addMarkersToMap(leaderboardData);
     }
 }
 
 document.getElementById('fetch-leaderboard').addEventListener('click', generateLeaderboard);
 
+document.addEventListener("DOMContentLoaded", function () {
+    window.leaderboardMap = L.map('leaderboard-map').setView([39.8283, -98.5795], 4); // Center on the USA
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors'
+    }).addTo(leaderboardMap);
 
+    // Add a legend to the map
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'info legend');
+        const grades = ['Early', 'Late'];
+        const colors = ['#00ff00', '#ff0000']; // Green to Red
+
+        // Loop through our grades and generate a label with a colored square for each grade
+        div.innerHTML = '<strong>Zman Time</strong><br>';
+        for (let i = 0; i < grades.length; i++) {
+            div.innerHTML += `<i style="background:${colors[i]}"></i> ${grades[i]}<br>`;
+        }
+
+        return div;
+    };
+    legend.addTo(leaderboardMap);
+});
+
+function addMarkersToMap(leaderboardData) {
+    // Calculate min and max Zmanim times for color gradient
+    const minTime = Math.min(...leaderboardData.map(item => item.time.getTime()));
+    const maxTime = Math.max(...leaderboardData.map(item => item.time.getTime()));
+
+    // Define color gradient function based on Zmanim time
+    function getColorForTime(time) {
+        const ratio = (time.getTime() - minTime) / (maxTime - minTime);
+        const hue = (1 - ratio) * 120; // Green (early) to red (late)
+        return `hsl(${hue}, 100%, 50%)`;
+    }
+
+    leaderboardData.forEach(item => {
+        const color = getColorForTime(item.time);
+
+        const marker = L.circleMarker([item.lat, item.lng], {
+            radius: 8,
+            fillColor: color,
+            color: "#000",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(leaderboardMap);
+
+        marker.bindPopup(`
+            <b>${item.city}, ${item.state}</b><br>
+            Zman: ${item.zman}<br>
+            Time: ${item.time.toLocaleTimeString('en-US', { timeZone: item.timezone })}
+        `);
+    });
+}
 
 
 
