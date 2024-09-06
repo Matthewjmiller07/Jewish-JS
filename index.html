@@ -7,6 +7,10 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -955,6 +959,8 @@ async function generateLeaderboard() {
         }
     });
 
+    let allLeaderboardData = []; // To store all Zmanim data for plotting on the map
+
     for (const zman of selectedZmanim) {
         const leaderboardData = [];
 
@@ -963,7 +969,6 @@ async function generateLeaderboard() {
             const zmanimData = await fetchZmanimForLocation(capital.lat, capital.lng);
 
             if (zmanimData.times[zman]) {
-                // Access the first date in the Zman object
                 const zmanTimeStr = Object.values(zmanimData.times[zman])[0];
                 const zmanTime = new Date(zmanTimeStr);
 
@@ -986,6 +991,9 @@ async function generateLeaderboard() {
             const bTime = new Date(b.time.toLocaleString('en-US', { timeZone: b.timezone }));
             return aTime - bTime;
         });
+
+        // Append data for this Zman to the overall dataset
+        allLeaderboardData = allLeaderboardData.concat(leaderboardData);
 
         // Create a new table for each Zman
         const table = document.createElement('table');
@@ -1021,20 +1029,26 @@ async function generateLeaderboard() {
             tbody.innerHTML += row;
         });
 
-        leaderboardContainer.appendChild(table); // Append each new table to the leaderboard container
-
-        // Add markers to the map
-        addMarkersToMap(leaderboardData);
+        leaderboardContainer.appendChild(table); // Append the table to the results container
     }
+
+    // Add all markers for the Zmanim to the map
+    addMarkersToMap(allLeaderboardData);
 }
+
 
 document.getElementById('fetch-leaderboard').addEventListener('click', generateLeaderboard);
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Initialize the map and clustering group
     window.leaderboardMap = L.map('leaderboard-map').setView([39.8283, -98.5795], 4); // Center on the USA
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors'
     }).addTo(leaderboardMap);
+
+    // Initialize a marker cluster group
+    window.markers = L.markerClusterGroup();
+    leaderboardMap.addLayer(markers);
 
     // Add a legend to the map
     const legend = L.control({ position: 'bottomright' });
@@ -1066,10 +1080,27 @@ function addMarkersToMap(leaderboardData) {
         return `hsl(${hue}, 100%, 50%)`;
     }
 
+    // Offset logic to avoid overlapping markers (adjusts the lat/lng slightly)
+    const offsetMultiplier = .2; // Adjust this for more or less spacing between overlapping markers
+    let offsetIndex = {}; // Track offsets per location
+
     leaderboardData.forEach(item => {
         const color = getColorForTime(item.time);
+        
+        // Initialize or increment offset for each location
+        const key = `${item.lat},${item.lng}`;
+        if (!offsetIndex[key]) {
+            offsetIndex[key] = { latOffset: 0, lngOffset: 0 };
+        } else {
+            offsetIndex[key].latOffset += offsetMultiplier;
+            offsetIndex[key].lngOffset += offsetMultiplier;
+        }
 
-        const marker = L.circleMarker([item.lat, item.lng], {
+        // Apply the offset to prevent overlap
+        const latOffset = item.lat + offsetIndex[key].latOffset;
+        const lngOffset = item.lng + offsetIndex[key].lngOffset;
+
+        const marker = L.circleMarker([latOffset, lngOffset], {
             radius: 8,
             fillColor: color,
             color: "#000",
@@ -1085,6 +1116,8 @@ function addMarkersToMap(leaderboardData) {
         `);
     });
 }
+
+
 
 
 
