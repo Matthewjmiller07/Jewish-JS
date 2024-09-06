@@ -177,15 +177,99 @@ table th {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
+.floating-filters {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        width: 80%;  /* Adjust width for mobile, can also use max-width */
+        max-width: 400px;  /* Ensure it doesn't take up the entire screen */
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        padding: 10px;
+        border-radius: 8px;
+        z-index: 1000;
+        touch-action: none; /* Disable touch scrolling while dragging */
+        overflow: hidden;  /* Prevent content overflow from showing outside the box */
+    }
+
+    .floating-filters:active {
+        cursor: grabbing;
+    }
+
+    #filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+        cursor: move; /* Show the move cursor when hovering over the header */
+        user-select: none; /* Disable text selection during dragging */
+    }
+
+    #filters-content {
+        max-height: 300px;  /* Limit height for mobile */
+        overflow-y: auto;  /* Enable vertical scrolling if content exceeds height */
+        padding-top: 10px;
+    }
+
+    #toggle-filters {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    #toggle-filters:hover {
+        background-color: #2980b9;
+    }
+
     </style>
 </head>
 <body>
     <h1>Advanced Zmanim Lookup</h1>
+
+    <!-- Floating Zmanim and Date Filters Section -->
+    <div id="filters-section" class="floating-filters">
+        <div id="filters-header">
+            <h2>Filters</h2>
+            <button id="toggle-filters">Minimize</button>
+        </div>
+
+        <div id="filters-content">
+            <!-- Date Filters -->
+            <div class="form-group">
+                <label for="start-date">Start Date:</label>
+                <input type="date" id="start-date" required>
+            </div>
+            <div class="form-group">
+                <label for="end-date">End Date (Optional):</label>
+                <input type="date" id="end-date">
+            </div>
+
+            <!-- Zmanim Selection -->
+            <div class="form-group">
+                <label>Select Zmanim:</label>
+                <div class="select-buttons">
+                    <button type="button" id="select-all">Select All</button>
+                    <button type="button" id="deselect-all">Deselect All</button>
+                </div>
+                <div id="zmanim-select"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Zmanim Section -->
     <div id="today-zmanim-section" style="margin-bottom: 30px;">
         <h2>Today's Zmanim</h2>
         <button id="zmanim-today-btn">Get Today's Zmanim</button>
         <div id="today-zmanim-results" class="zmanim-results-container"></div>
     </div>
+
+    <!-- City Input Section -->
     <form id="zmanim-form">
         <div id="map" style="height: 400px; margin-bottom: 20px;"></div>
         <div id="cities-container">
@@ -193,54 +277,100 @@ table th {
                 <input type="text" placeholder="Enter city name" required>
                 <button type="button" class="remove-city" style="display:none;">Remove</button>
             </div>
-
         </div>
         <button type="button" id="add-city">Add City</button>
-        <div class="form-group">
-            <label for="start-date">Start Date:</label>
-            <input type="date" id="start-date" required>
-        </div>
-        <div class="form-group">
-            <label for="end-date">End Date (Optional):</label>
-            <input type="date" id="end-date">
-        </div>
-        <div class="form-group">
-            <label>Select Zmanim:</label>
-            <div class="select-buttons">
-                <button type="button" id="select-all">Select All</button>
-                <button type="button" id="deselect-all">Deselect All</button>
-            </div>
-            <div id="zmanim-select"></div>
-        </div>
         <button type="submit">Get Zmanim</button>
     </form>
-    <div id="results"></div>
-    <div id="chart-container">
+
+    <!-- Results Section -->
+    <div id="results" style="margin-bottom: 30px;"></div>
+
+    <!-- Chart Container -->
+    <div id="chart-container" style="margin-bottom: 30px;">
         <div id="zmanim-chart"></div>
+    </div>
 
     <!-- Leaderboard Section -->
-<!-- Leaderboard Section -->
-<div id="leaderboard">
-    <h2>Zmanim Leaderboard</h2>
-    <button id="fetch-leaderboard">Generate Leaderboard</button>
-    <div id="leaderboard-results">
-        <table>
-            <thead>
-                <tr>
-                    <th>Zman</th>
-                    <th>City</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-                <!-- Results will be populated here -->
-            </tbody>
-        </table>
+    <div id="leaderboard" style="margin-bottom: 30px;">
+        <h2>Zmanim Leaderboard</h2>
+        <button id="fetch-leaderboard">Generate Leaderboard</button>
+        <div id="leaderboard-results">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Zman</th>
+                        <th>City</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Results will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <div id="leaderboard-map"></div>
     </div>
-    <div id="leaderboard-map"></div>
-</div>
+
+</body>
 
     <script>
+
+              // Toggling minimize/maximize functionality
+    const toggleButton = document.getElementById('toggle-filters');
+    const filtersContent = document.getElementById('filters-content');
+
+    toggleButton.addEventListener('click', function () {
+        if (filtersContent.style.display === 'none') {
+            filtersContent.style.display = 'block';
+            toggleButton.textContent = 'Minimize';
+        } else {
+            filtersContent.style.display = 'none';
+            toggleButton.textContent = 'Maximize';
+        }
+    });
+
+    // Making the filters section draggable for both mouse and touch events
+    const filtersSection = document.getElementById('filters-section');
+    const filtersHeader = document.getElementById('filters-header');
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    // For both touch and mouse movement
+    function onMove(e) {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        if (isDragging) {
+            filtersSection.style.left = `${clientX - offsetX}px`;
+            filtersSection.style.top = `${clientY - offsetY}px`;
+        }
+    }
+
+    // Handle mousedown or touchstart
+    function onStart(e) {
+        isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        offsetX = clientX - filtersSection.getBoundingClientRect().left;
+        offsetY = clientY - filtersSection.getBoundingClientRect().top;
+
+        // Add listeners for move and end events
+        document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onMove);
+    }
+
+    // Handle mouseup or touchend
+    function onEnd(e) {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+    }
+
+    // Attach event listeners for mouse and touch
+    filtersHeader.addEventListener('mousedown', onStart);
+    filtersHeader.addEventListener('touchstart', onStart);
+
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
 
         let chart; // Global variable to hold the chart instance
         const zmanim = [
